@@ -103,6 +103,12 @@ class Subject(UUIDMixin, TimestampMixin, Base):
         lazy="selectin",
         foreign_keys=[created_by],
     )
+    question_papers: Mapped[List["QuestionPaper"]] = relationship(
+        "QuestionPaper",
+        back_populates="subject",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return (

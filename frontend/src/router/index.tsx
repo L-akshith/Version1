@@ -13,6 +13,7 @@ import { RolesPage } from "../pages/RolesPage";
 import { PapersPage } from "../pages/PapersPage";
 import { ExamsPage } from "../pages/ExamsPage";
 import { SubjectsPage } from "../pages/SubjectsPage";
+import { QuestionPapersPage } from "../pages/QuestionPapersPage";
 import { AuditPage } from "../pages/AuditPage";
 
 export const router = createBrowserRouter([
@@ -51,6 +52,10 @@ export const router = createBrowserRouter([
       {
         path: "subjects",
         element: <SubjectsPage />,
+      },
+      {
+        path: "question-papers",
+        element: <QuestionPapersPage />,
       },
       {
         path: "users",

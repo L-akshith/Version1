@@ -61,7 +61,7 @@ export const MainLayout: React.FC = () => {
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/exams", label: "Exams", icon: ClipboardList, permission: "exams:read" },
     { to: "/subjects", label: "Subjects", icon: BookOpen, permission: "subjects:read" },
-    { to: "/papers", label: "Papers (Cryptographic)", icon: FileText },
+    { to: "/question-papers", label: "Question Papers", icon: FileText, permission: "questionpapers:read" },
     { to: "/users", label: "User Management", icon: Users, permission: "users:manage" },
     { to: "/roles", label: "Roles & Permissions", icon: KeyRound, permission: "roles:manage" },
     { to: "/audit", label: "Audit Logs", icon: History, permission: "audit:list" },

@@ -28,6 +28,7 @@ from app.models.permission import Permission  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.exam import Exam  # noqa: F401
 from app.models.subject import Subject  # noqa: F401
+from app.models.question_paper import QuestionPaper  # noqa: F401
 
 # Use in-memory SQLite for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

@@ -187,6 +187,25 @@ async def get_subject_service(session: DBSession) -> SubjectService:
     return SubjectService(session)
 
 
+def get_storage_provider() -> "StorageInterface":
+    """Return a StorageInterface instance."""
+    from app.storage.local_storage import LocalStorageProvider
+    from app.core.config import get_settings
+    settings = get_settings()
+    return LocalStorageProvider(base_dir=settings.UPLOAD_DIR)
+
+
+async def get_question_paper_service(
+    session: DBSession,
+) -> "QuestionPaperService":
+    """Return a QuestionPaperService instance."""
+    from app.services.question_paper_service import QuestionPaperService
+    return QuestionPaperService(
+        session=session,
+        storage_provider=get_storage_provider(),
+    )
+
+
 # ── Annotated Types for Convenience ──────────────────────────────
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]

@@ -108,3 +108,52 @@ export interface SubjectStatistics {
   active: number;
   archived: number;
 }
+
+export interface QuestionPaper {
+  id: string;
+  subject_id: string;
+  paper_code: string;
+  title: string;
+  version: number;
+  description: string | null;
+  status: string;
+  file_name: string;
+  original_file_name: string;
+  storage_path: string;
+  mime_type: string;
+  file_size: number;
+  sha256_hash: string;
+  uploaded_by: string;
+  approved_by: string | null;
+  upload_time: string;
+  subject_name: string | null;
+  exam_name: string | null;
+  uploader_name: string | null;
+  approver_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuestionPaperVersion {
+  id: string;
+  version: number;
+  status: string;
+  file_name: string;
+  original_file_name: string;
+  file_size: number;
+  sha256_hash: string;
+  uploaded_by: string;
+  uploader_name: string | null;
+  upload_time: string;
+  created_at: string;
+}
+
+export interface QuestionPaperStatistics {
+  total: number;
+  draft: number;
+  uploaded: number;
+  under_review: number;
+  approved: number;
+  rejected: number;
+  archived: number;
+}

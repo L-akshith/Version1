@@ -18,6 +18,7 @@ class Resource(str, Enum):
     ROLES = "roles"
     PERMISSIONS = "permissions"
     PAPERS = "papers"
+    QUESTION_PAPERS = "question_papers"
     EXAMS = "exams"
     SUBJECTS = "subjects"
     AUDIT = "audit"
@@ -64,6 +65,11 @@ DEFAULT_PERMISSIONS = [
     {"name": "papers:list", "resource": Resource.PAPERS, "action": Action.LIST, "description": "List examination papers"},
     {"name": "papers:approve", "resource": Resource.PAPERS, "action": Action.APPROVE, "description": "Approve examination papers"},
     {"name": "papers:release", "resource": Resource.PAPERS, "action": Action.RELEASE, "description": "Release examination papers"},
+    # Question Papers
+    {"name": "questionpapers:create", "resource": Resource.QUESTION_PAPERS, "action": Action.CREATE, "description": "Upload question papers"},
+    {"name": "questionpapers:read", "resource": Resource.QUESTION_PAPERS, "action": Action.READ, "description": "View question papers"},
+    {"name": "questionpapers:update", "resource": Resource.QUESTION_PAPERS, "action": Action.UPDATE, "description": "Update question papers"},
+    {"name": "questionpapers:delete", "resource": Resource.QUESTION_PAPERS, "action": Action.DELETE, "description": "Delete question papers"},
     # Audit
     {"name": "audit:read", "resource": Resource.AUDIT, "action": Action.READ, "description": "View audit logs"},
     {"name": "audit:list", "resource": Resource.AUDIT, "action": Action.LIST, "description": "List audit entries"},
@@ -98,6 +104,7 @@ DEFAULT_ROLES = {
             "roles:list", "roles:read",
             "papers:create", "papers:read", "papers:update", "papers:list",
             "papers:approve", "papers:release",
+            "questionpapers:create", "questionpapers:read", "questionpapers:update",
             "exams:create", "exams:read", "exams:update", "exams:list",
             "subjects:create", "subjects:read", "subjects:update",
             "audit:read", "audit:list",
@@ -107,6 +114,7 @@ DEFAULT_ROLES = {
         "description": "Subject matter expert who creates examination questions",
         "permissions": [
             "papers:create", "papers:read", "papers:update", "papers:list",
+            "questionpapers:create", "questionpapers:read", "questionpapers:update",
             "subjects:read",
         ],
     },
@@ -114,24 +122,28 @@ DEFAULT_ROLES = {
         "description": "Translates examination papers into regional languages",
         "permissions": [
             "papers:read", "papers:update", "papers:list",
+            "questionpapers:read", "questionpapers:update",
         ],
     },
     "Moderator": {
         "description": "Reviews and moderates examination papers for quality",
         "permissions": [
             "papers:read", "papers:list", "papers:approve",
+            "questionpapers:read",
         ],
     },
     "Exam Center Officer": {
         "description": "Manages paper distribution at examination centers",
         "permissions": [
             "papers:read", "papers:list",
+            "questionpapers:read",
         ],
     },
     "Observer": {
         "description": "Read-only observer for audit and compliance",
         "permissions": [
             "papers:list", "papers:read",
+            "questionpapers:read",
             "exams:read", "exams:list",
             "subjects:read",
             "audit:read", "audit:list",
@@ -141,6 +153,7 @@ DEFAULT_ROLES = {
         "description": "Investigates potential paper leaks and security incidents",
         "permissions": [
             "papers:read", "papers:list", "papers:investigate",
+            "questionpapers:read",
             "audit:read", "audit:list",
             "users:list", "users:read",
         ],

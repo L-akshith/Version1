@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 
+    # ── File Storage ─────────────────────────────────────────────
+    UPLOAD_DIR: str = "uploads/question_papers"
+    MAX_UPLOAD_SIZE_MB: int = 50
+
     # ── Security (Placeholders for future cryptography) ──────────
     ENCRYPTION_KEY: Optional[str] = None
     SIGNING_KEY: Optional[str] = None

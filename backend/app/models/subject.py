@@ -1,37 +1,32 @@
 """
-ExamShield - Exam Model
+ExamShield - Subject Model
 
-Defines the Exam ORM model representing an examination entry
-with lifecycle status tracking and conducting authority metadata.
+Defines the Subject ORM model representing a subject within an examination.
+Each subject belongs to exactly one exam and has a unique code per exam scope.
 """
 
 import uuid
-from datetime import date
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Date, ForeignKey, String, Text
+from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin, UUIDMixin
 
 
-class ExamStatus:
-    """Allowed status values for an examination."""
+class SubjectStatus:
+    """Allowed status values for a subject."""
 
     DRAFT = "draft"
-    SCHEDULED = "scheduled"
     ACTIVE = "active"
-    COMPLETED = "completed"
     ARCHIVED = "archived"
 
-    ALL = {DRAFT, SCHEDULED, ACTIVE, COMPLETED, ARCHIVED}
+    ALL = {DRAFT, ACTIVE, ARCHIVED}
 
     TRANSITIONS = {
-        DRAFT: {SCHEDULED},
-        SCHEDULED: {ACTIVE},
-        ACTIVE: {COMPLETED},
-        COMPLETED: {ARCHIVED},
+        DRAFT: {ACTIVE},
+        ACTIVE: {ARCHIVED},
         ARCHIVED: set(),
     }
 
@@ -42,36 +37,40 @@ class ExamStatus:
         return target in allowed
 
 
-class Exam(UUIDMixin, TimestampMixin, Base):
+class Subject(UUIDMixin, TimestampMixin, Base):
     """
-    Exam model for examination lifecycle management.
+    Subject model for managing subjects within an examination.
 
-    Each exam has a unique code, belongs to a conducting authority,
-    and follows a strict status progression:
-    Draft → Scheduled → Active → Completed → Archived.
+    Each subject has a unique code within its parent exam and follows
+    a strict status progression: Draft → Active → Archived.
     """
 
-    __tablename__ = "exams"
+    __tablename__ = "subjects"
+    __table_args__ = (
+        UniqueConstraint(
+            "exam_id",
+            "subject_code",
+            name="uq_subject_code_per_exam",
+        ),
+    )
 
-    exam_code: Mapped[str] = mapped_column(
-        String(50),
-        unique=True,
+    exam_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("exams.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    exam_name: Mapped[str] = mapped_column(
+    subject_code: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+    subject_name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
     )
-    conducting_authority: Mapped[str] = mapped_column(
-        String(255),
-        nullable=False,
-    )
-    year: Mapped[int] = mapped_column(
-        nullable=False,
-    )
-    exam_date: Mapped[date] = mapped_column(
-        Date,
+    language: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
     )
     description: Mapped[Optional[str]] = mapped_column(
@@ -81,7 +80,7 @@ class Exam(UUIDMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
-        default=ExamStatus.DRAFT,
+        default=SubjectStatus.DRAFT,
         index=True,
     )
 
@@ -94,22 +93,29 @@ class Exam(UUIDMixin, TimestampMixin, Base):
     )
 
     # ── Relationships ────────────────────────────────────────────
+    exam: Mapped["Exam"] = relationship(
+        "Exam",
+        back_populates="subjects",
+        lazy="selectin",
+    )
     creator: Mapped["User"] = relationship(
         "User",
         lazy="selectin",
         foreign_keys=[created_by],
     )
-    subjects: Mapped[List["Subject"]] = relationship(
-        "Subject",
-        back_populates="exam",
-        lazy="selectin",
-        cascade="all, delete-orphan",
-    )
 
     def __repr__(self) -> str:
-        return f"<Exam(id={self.id}, code='{self.exam_code}', status='{self.status}')>"
+        return (
+            f"<Subject(id={self.id}, code='{self.subject_code}', "
+            f"exam_id={self.exam_id}, status='{self.status}')>"
+        )
+
+    @property
+    def exam_name(self) -> Optional[str]:
+        """Return the name of the parent exam, or None if unresolvable."""
+        return self.exam.exam_name if self.exam else None
 
     @property
     def creator_name(self) -> Optional[str]:
-        """Return the name of the exam creator, or None if unresolvable."""
+        """Return the name of the subject creator, or None if unresolvable."""
         return self.creator.full_name if self.creator else None

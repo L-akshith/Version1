@@ -86,3 +86,25 @@ export interface ExamStatistics {
   completed: number;
   archived: number;
 }
+
+export interface Subject {
+  id: string;
+  exam_id: string;
+  subject_code: string;
+  subject_name: string;
+  language: string;
+  description: string | null;
+  status: string;
+  created_by: string;
+  exam_name: string | null;
+  creator_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubjectStatistics {
+  total: number;
+  draft: number;
+  active: number;
+  archived: number;
+}

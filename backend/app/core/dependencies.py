@@ -17,6 +17,7 @@ from app.database.session import get_async_session
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
+from app.services.subject_service import SubjectService
 from app.services.user_service import UserService
 from app.utils.jwt import decode_token
 
@@ -179,6 +180,11 @@ async def get_auth_service(session: DBSession) -> AuthService:
 async def get_user_service(session: DBSession) -> UserService:
     """Return a UserService instance."""
     return UserService(session)
+
+
+async def get_subject_service(session: DBSession) -> SubjectService:
+    """Return a SubjectService instance."""
+    return SubjectService(session)
 
 
 # ── Annotated Types for Convenience ──────────────────────────────

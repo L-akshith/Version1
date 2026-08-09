@@ -10,7 +10,8 @@ import {
   History, 
   LogOut,
   Menu,
-  ClipboardList
+  ClipboardList,
+  BookOpen
 } from "lucide-react";
 
 export const MainLayout: React.FC = () => {
@@ -50,12 +51,16 @@ export const MainLayout: React.FC = () => {
     if (permission === "exams:read") {
       return ["Admin", "Controller", "Observer", "Investigator"].includes(user.role_name || "");
     }
+    if (permission === "subjects:read") {
+      return ["Admin", "Controller", "Observer", "Question Setter"].includes(user.role_name || "");
+    }
     return true;
   };
 
   const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/exams", label: "Exams", icon: ClipboardList, permission: "exams:read" },
+    { to: "/subjects", label: "Subjects", icon: BookOpen, permission: "subjects:read" },
     { to: "/papers", label: "Papers (Cryptographic)", icon: FileText },
     { to: "/users", label: "User Management", icon: Users, permission: "users:manage" },
     { to: "/roles", label: "Roles & Permissions", icon: KeyRound, permission: "roles:manage" },

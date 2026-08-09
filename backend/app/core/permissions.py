@@ -19,6 +19,7 @@ class Resource(str, Enum):
     PERMISSIONS = "permissions"
     PAPERS = "papers"
     EXAMS = "exams"
+    SUBJECTS = "subjects"
     AUDIT = "audit"
     SYSTEM = "system"
 
@@ -72,6 +73,11 @@ DEFAULT_PERMISSIONS = [
     {"name": "exams:update", "resource": Resource.EXAMS, "action": Action.UPDATE, "description": "Update examinations"},
     {"name": "exams:delete", "resource": Resource.EXAMS, "action": Action.DELETE, "description": "Delete examinations"},
     {"name": "exams:list", "resource": Resource.EXAMS, "action": Action.LIST, "description": "List examinations"},
+    # Subjects
+    {"name": "subjects:create", "resource": Resource.SUBJECTS, "action": Action.CREATE, "description": "Create subjects"},
+    {"name": "subjects:read", "resource": Resource.SUBJECTS, "action": Action.READ, "description": "View subject details"},
+    {"name": "subjects:update", "resource": Resource.SUBJECTS, "action": Action.UPDATE, "description": "Update subjects"},
+    {"name": "subjects:delete", "resource": Resource.SUBJECTS, "action": Action.DELETE, "description": "Delete subjects"},
     # System
     {"name": "system:manage", "resource": Resource.SYSTEM, "action": Action.MANAGE, "description": "System administration"},
     # Investigation
@@ -93,6 +99,7 @@ DEFAULT_ROLES = {
             "papers:create", "papers:read", "papers:update", "papers:list",
             "papers:approve", "papers:release",
             "exams:create", "exams:read", "exams:update", "exams:list",
+            "subjects:create", "subjects:read", "subjects:update",
             "audit:read", "audit:list",
         ],
     },
@@ -100,6 +107,7 @@ DEFAULT_ROLES = {
         "description": "Subject matter expert who creates examination questions",
         "permissions": [
             "papers:create", "papers:read", "papers:update", "papers:list",
+            "subjects:read",
         ],
     },
     "Translation Officer": {
@@ -125,6 +133,7 @@ DEFAULT_ROLES = {
         "permissions": [
             "papers:list", "papers:read",
             "exams:read", "exams:list",
+            "subjects:read",
             "audit:read", "audit:list",
         ],
     },

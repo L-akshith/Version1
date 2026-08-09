@@ -12,6 +12,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.users import router as users_router
 from app.api.v1.roles import router as roles_router
 from app.api.v1.papers import router as papers_router
+from app.api.v1.exams import router as exams_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.health import router as health_router
 from app.core.config import get_settings
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
     app.include_router(users_router, prefix="/api/v1")
     app.include_router(roles_router, prefix="/api/v1")
     app.include_router(papers_router, prefix="/api/v1")
+    app.include_router(exams_router, prefix="/api/v1")
     app.include_router(audit_router, prefix="/api/v1")
 
     # Root route for basic landing page/health confirmation

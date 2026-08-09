@@ -21,6 +21,12 @@ from app.database.base import Base
 from app.database.session import get_async_session
 from app.main import app
 from app.database.seed import seed_permissions, seed_roles, seed_superuser
+# Import all models so they are registered on Base.metadata for table creation
+from app.models.user import User  # noqa: F401
+from app.models.role import Role  # noqa: F401
+from app.models.permission import Permission  # noqa: F401
+from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.exam import Exam  # noqa: F401
 
 # Use in-memory SQLite for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

@@ -9,7 +9,8 @@ import {
   FileText, 
   History, 
   LogOut,
-  Menu
+  Menu,
+  ClipboardList
 } from "lucide-react";
 
 export const MainLayout: React.FC = () => {
@@ -46,11 +47,15 @@ export const MainLayout: React.FC = () => {
     if (permission === "audit:list") {
       return ["Admin", "Controller", "Observer", "Investigator"].includes(user.role_name || "");
     }
+    if (permission === "exams:read") {
+      return ["Admin", "Controller", "Observer", "Investigator"].includes(user.role_name || "");
+    }
     return true;
   };
 
   const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/exams", label: "Exams", icon: ClipboardList, permission: "exams:read" },
     { to: "/papers", label: "Papers (Cryptographic)", icon: FileText },
     { to: "/users", label: "User Management", icon: Users, permission: "users:manage" },
     { to: "/roles", label: "Roles & Permissions", icon: KeyRound, permission: "roles:manage" },

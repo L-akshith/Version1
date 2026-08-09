@@ -17,7 +17,7 @@ export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [health, setHealth] = useState<any>(null);
   const [activeUsersCount, setActiveUsersCount] = useState<number>(1);
-  const [rolesCount, setRolesCount] = useState<number>(8);
+  const [examStats, setExamStats] = useState<any>(null);
 
   useEffect(() => {
     // Fetch system health status
@@ -35,13 +35,13 @@ export const DashboardPage: React.FC = () => {
         })
         .catch((err) => console.error("Error fetching users count:", err));
         
-      api.get("/roles?limit=1")
+      api.get("/exams/statistics")
         .then((res) => {
-          if (res.data && typeof res.data.total === "number") {
-            setRolesCount(res.data.total);
+          if (res.data && res.data.success) {
+            setExamStats(res.data.data);
           }
         })
-        .catch((err) => console.error("Error fetching roles count:", err));
+        .catch((err) => console.error("Error fetching exams stats:", err));
     }
   }, [user]);
 
@@ -63,10 +63,10 @@ export const DashboardPage: React.FC = () => {
       bgGlow: "bg-blue-500/5",
     },
     {
-      title: "Assigned Roles",
-      value: rolesCount.toString(),
-      desc: "Configured access roles",
-      icon: KeyRound,
+      title: "Active Exams",
+      value: examStats?.active?.toString() || "0",
+      desc: "Currently running examinations",
+      icon: ShieldAlert,
       color: "text-purple-400",
       bgGlow: "bg-purple-500/5",
     },
@@ -100,8 +100,14 @@ export const DashboardPage: React.FC = () => {
 
         <div className="flex gap-3 shrink-0">
           <Link
-            to="/papers"
+            to="/exams"
             className="px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-950 hover:bg-slate-100 transition-colors shadow-lg shadow-black/20"
+          >
+            Manage Exams
+          </Link>
+          <Link
+            to="/papers"
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition-colors"
           >
             View Papers
           </Link>

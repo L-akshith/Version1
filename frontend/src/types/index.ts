@@ -62,3 +62,27 @@ export interface AuditLog {
   execution_time_ms: number | null;
   created_at: string;
 }
+
+export interface Exam {
+  id: string;
+  exam_code: string;
+  exam_name: string;
+  conducting_authority: string;
+  year: number;
+  exam_date: string;
+  description: string | null;
+  status: string;
+  created_by: string;
+  creator_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamStatistics {
+  total: number;
+  draft: number;
+  scheduled: number;
+  active: number;
+  completed: number;
+  archived: number;
+}

@@ -11,6 +11,7 @@ import { DashboardPage } from "../pages/DashboardPage";
 import { UsersPage } from "../pages/UsersPage";
 import { RolesPage } from "../pages/RolesPage";
 import { PapersPage } from "../pages/PapersPage";
+import { ExamsPage } from "../pages/ExamsPage";
 import { AuditPage } from "../pages/AuditPage";
 
 export const router = createBrowserRouter([
@@ -41,6 +42,10 @@ export const router = createBrowserRouter([
       {
         path: "papers",
         element: <PapersPage />,
+      },
+      {
+        path: "exams",
+        element: <ExamsPage />,
       },
       {
         path: "users",

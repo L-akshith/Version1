@@ -18,6 +18,7 @@ class Resource(str, Enum):
     ROLES = "roles"
     PERMISSIONS = "permissions"
     PAPERS = "papers"
+    EXAMS = "exams"
     AUDIT = "audit"
     SYSTEM = "system"
 
@@ -65,6 +66,12 @@ DEFAULT_PERMISSIONS = [
     # Audit
     {"name": "audit:read", "resource": Resource.AUDIT, "action": Action.READ, "description": "View audit logs"},
     {"name": "audit:list", "resource": Resource.AUDIT, "action": Action.LIST, "description": "List audit entries"},
+    # Exams
+    {"name": "exams:create", "resource": Resource.EXAMS, "action": Action.CREATE, "description": "Create examinations"},
+    {"name": "exams:read", "resource": Resource.EXAMS, "action": Action.READ, "description": "View examination details"},
+    {"name": "exams:update", "resource": Resource.EXAMS, "action": Action.UPDATE, "description": "Update examinations"},
+    {"name": "exams:delete", "resource": Resource.EXAMS, "action": Action.DELETE, "description": "Delete examinations"},
+    {"name": "exams:list", "resource": Resource.EXAMS, "action": Action.LIST, "description": "List examinations"},
     # System
     {"name": "system:manage", "resource": Resource.SYSTEM, "action": Action.MANAGE, "description": "System administration"},
     # Investigation
@@ -85,6 +92,7 @@ DEFAULT_ROLES = {
             "roles:list", "roles:read",
             "papers:create", "papers:read", "papers:update", "papers:list",
             "papers:approve", "papers:release",
+            "exams:create", "exams:read", "exams:update", "exams:list",
             "audit:read", "audit:list",
         ],
     },
@@ -116,6 +124,7 @@ DEFAULT_ROLES = {
         "description": "Read-only observer for audit and compliance",
         "permissions": [
             "papers:list", "papers:read",
+            "exams:read", "exams:list",
             "audit:read", "audit:list",
         ],
     },

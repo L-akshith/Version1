@@ -54,6 +54,9 @@ export const MainLayout: React.FC = () => {
     if (permission === "subjects:read") {
       return ["Admin", "Controller", "Observer", "Question Setter"].includes(user.role_name || "");
     }
+    if (permission === "workflow:view") {
+      return ["Admin", "Controller"].includes(user.role_name || "");
+    }
     return true;
   };
 
@@ -62,6 +65,7 @@ export const MainLayout: React.FC = () => {
     { to: "/exams", label: "Exams", icon: ClipboardList, permission: "exams:read" },
     { to: "/subjects", label: "Subjects", icon: BookOpen, permission: "subjects:read" },
     { to: "/question-papers", label: "Question Papers", icon: FileText, permission: "questionpapers:read" },
+    { to: "/approvals", label: "Approvals", icon: CheckBadge, permission: "workflow:view" },
     { to: "/users", label: "User Management", icon: Users, permission: "users:manage" },
     { to: "/roles", label: "Roles & Permissions", icon: KeyRound, permission: "roles:manage" },
     { to: "/audit", label: "Audit Logs", icon: History, permission: "audit:list" },

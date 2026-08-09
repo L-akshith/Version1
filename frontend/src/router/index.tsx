@@ -15,6 +15,7 @@ import { ExamsPage } from "../pages/ExamsPage";
 import { SubjectsPage } from "../pages/SubjectsPage";
 import { QuestionPapersPage } from "../pages/QuestionPapersPage";
 import { AuditPage } from "../pages/AuditPage";
+import { ApprovalDashboardPage } from "../pages/ApprovalDashboardPage";
 
 export const router = createBrowserRouter([
   {
@@ -68,6 +69,10 @@ export const router = createBrowserRouter([
       {
         path: "audit",
         element: <AuditPage />,
+      },
+      {
+        path: "approvals",
+        element: <ApprovalDashboardPage />,
       },
     ],
   },

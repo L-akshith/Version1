@@ -8,7 +8,7 @@ full version control with SHA-256 integrity hashing.
 
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 
 from sqlalchemy import (
     BigInteger,
@@ -163,6 +163,13 @@ class QuestionPaper(UUIDMixin, TimestampMixin, Base):
         "User",
         lazy="selectin",
         foreign_keys=[approved_by],
+    )
+    workflows: Mapped[List["ApprovalWorkflow"]] = relationship(
+        "ApprovalWorkflow",
+        back_populates="question_paper",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        order_by="desc(ApprovalWorkflow.created_at)",
     )
 
     def __repr__(self) -> str:

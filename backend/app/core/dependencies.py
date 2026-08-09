@@ -206,6 +206,14 @@ async def get_question_paper_service(
     )
 
 
+async def get_approval_workflow_service(
+    session: DBSession,
+) -> "ApprovalWorkflowService":
+    """Return an ApprovalWorkflowService instance."""
+    from app.services.approval_workflow_service import ApprovalWorkflowService
+    return ApprovalWorkflowService(session=session)
+
+
 # ── Annotated Types for Convenience ──────────────────────────────
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]

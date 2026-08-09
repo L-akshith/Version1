@@ -29,6 +29,7 @@ from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.exam import Exam  # noqa: F401
 from app.models.subject import Subject  # noqa: F401
 from app.models.question_paper import QuestionPaper  # noqa: F401
+from app.models.approval_workflow import ApprovalWorkflow  # noqa: F401
 
 # Use in-memory SQLite for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -101,3 +102,73 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield ac
         
     app.dependency_overrides.clear()
+
+
+import uuid
+from datetime import date
+from sqlalchemy import select
+from app.models.user import User
+from app.models.exam import Exam, ExamStatus
+from app.models.subject import Subject, SubjectStatus
+from app.models.question_paper import QuestionPaper, QuestionPaperStatus
+
+@pytest_asyncio.fixture
+async def test_admin(db_session: AsyncSession) -> User:
+    stmt = select(User).where(User.email == "admin@examshield.gov.in")
+    result = await db_session.execute(stmt)
+    return result.scalar_one()
+
+@pytest_asyncio.fixture
+async def test_exam(db_session: AsyncSession, test_admin: User) -> Exam:
+    exam = Exam(
+        id=uuid.uuid4(),
+        exam_code="QP-TEST-EXAM",
+        exam_name="QP Test Exam",
+        conducting_authority="Test Auth",
+        year=2028,
+        exam_date=date(2028, 6, 1),
+        status=ExamStatus.ACTIVE,
+        created_by=test_admin.id,
+    )
+    db_session.add(exam)
+    await db_session.commit()
+    await db_session.refresh(exam)
+    return exam
+
+@pytest_asyncio.fixture
+async def test_subject(db_session: AsyncSession, test_admin: User, test_exam: Exam) -> Subject:
+    subject = Subject(
+        id=uuid.uuid4(),
+        exam_id=test_exam.id,
+        subject_code="QP-SUB",
+        subject_name="QP Subject",
+        language="English",
+        status=SubjectStatus.ACTIVE,
+        created_by=test_admin.id,
+    )
+    db_session.add(subject)
+    await db_session.commit()
+    await db_session.refresh(subject)
+    return subject
+
+@pytest_asyncio.fixture
+async def test_paper(db_session: AsyncSession, test_admin: User, test_subject: Subject) -> QuestionPaper:
+    paper = QuestionPaper(
+        id=uuid.uuid4(),
+        subject_id=test_subject.id,
+        paper_code="MATH-101",
+        title="Mathematics Base",
+        version=1,
+        status=QuestionPaperStatus.UPLOADED,
+        file_name="MATH-101_v1_uuid.pdf",
+        original_file_name="math.pdf",
+        storage_path="path/to/math.pdf",
+        mime_type="application/pdf",
+        file_size=1024,
+        sha256_hash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        uploaded_by=test_admin.id,
+    )
+    db_session.add(paper)
+    await db_session.commit()
+    await db_session.refresh(paper)
+    return paper

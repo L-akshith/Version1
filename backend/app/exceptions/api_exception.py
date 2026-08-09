@@ -78,6 +78,21 @@ class BadRequestException(APIException):
         )
 
 
+class ForbiddenException(APIException):
+    """Raised when the user is authenticated but not authorized to perform the action."""
+
+    def __init__(
+        self,
+        message: str = "Forbidden",
+        errors: Optional[List[Dict[str, Any]]] = None,
+    ) -> None:
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_403_FORBIDDEN,
+            errors=errors,
+        )
+
+
 def _build_error_response(
     success: bool,
     message: str,

@@ -19,6 +19,7 @@ class Resource(str, Enum):
     PERMISSIONS = "permissions"
     PAPERS = "papers"
     QUESTION_PAPERS = "question_papers"
+    WORKFLOWS = "workflows"
     EXAMS = "exams"
     SUBJECTS = "subjects"
     AUDIT = "audit"
@@ -70,6 +71,11 @@ DEFAULT_PERMISSIONS = [
     {"name": "questionpapers:read", "resource": Resource.QUESTION_PAPERS, "action": Action.READ, "description": "View question papers"},
     {"name": "questionpapers:update", "resource": Resource.QUESTION_PAPERS, "action": Action.UPDATE, "description": "Update question papers"},
     {"name": "questionpapers:delete", "resource": Resource.QUESTION_PAPERS, "action": Action.DELETE, "description": "Delete question papers"},
+    # Workflows
+    {"name": "workflow:approve", "resource": Resource.WORKFLOWS, "action": Action.UPDATE, "description": "Approve question papers"},
+    {"name": "workflow:reject", "resource": Resource.WORKFLOWS, "action": Action.UPDATE, "description": "Reject question papers"},
+    {"name": "workflow:return", "resource": Resource.WORKFLOWS, "action": Action.UPDATE, "description": "Return question papers for revision"},
+    {"name": "workflow:view", "resource": Resource.WORKFLOWS, "action": Action.READ, "description": "View workflow history"},
     # Audit
     {"name": "audit:read", "resource": Resource.AUDIT, "action": Action.READ, "description": "View audit logs"},
     {"name": "audit:list", "resource": Resource.AUDIT, "action": Action.LIST, "description": "List audit entries"},
@@ -105,6 +111,7 @@ DEFAULT_ROLES = {
             "papers:create", "papers:read", "papers:update", "papers:list",
             "papers:approve", "papers:release",
             "questionpapers:create", "questionpapers:read", "questionpapers:update",
+            "workflow:approve", "workflow:reject", "workflow:return", "workflow:view",
             "exams:create", "exams:read", "exams:update", "exams:list",
             "subjects:create", "subjects:read", "subjects:update",
             "audit:read", "audit:list",
@@ -115,6 +122,7 @@ DEFAULT_ROLES = {
         "permissions": [
             "papers:create", "papers:read", "papers:update", "papers:list",
             "questionpapers:create", "questionpapers:read", "questionpapers:update",
+            "workflow:view",
             "subjects:read",
         ],
     },
@@ -123,6 +131,7 @@ DEFAULT_ROLES = {
         "permissions": [
             "papers:read", "papers:update", "papers:list",
             "questionpapers:read", "questionpapers:update",
+            "workflow:view",
         ],
     },
     "Moderator": {
@@ -130,6 +139,7 @@ DEFAULT_ROLES = {
         "permissions": [
             "papers:read", "papers:list", "papers:approve",
             "questionpapers:read",
+            "workflow:approve", "workflow:reject", "workflow:return", "workflow:view",
         ],
     },
     "Exam Center Officer": {
@@ -144,6 +154,7 @@ DEFAULT_ROLES = {
         "permissions": [
             "papers:list", "papers:read",
             "questionpapers:read",
+            "workflow:view",
             "exams:read", "exams:list",
             "subjects:read",
             "audit:read", "audit:list",

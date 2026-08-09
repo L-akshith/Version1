@@ -16,6 +16,7 @@ from app.api.v1.exams import router as exams_router
 from app.api.v1.subjects import router as subjects_router
 from app.api.v1.question_papers import router as question_papers_router
 from app.api.v1.approval_workflows import router as approval_workflows_router
+from app.api.v1.security_keys import router as security_keys_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.health import router as health_router
 from app.core.config import get_settings
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(subjects_router, prefix="/api/v1")
     app.include_router(question_papers_router, prefix="/api/v1")
     app.include_router(approval_workflows_router, prefix="/api/v1")
+    app.include_router(security_keys_router, prefix="/api/v1")
     app.include_router(audit_router, prefix="/api/v1")
 
     # Root route for basic landing page/health confirmation

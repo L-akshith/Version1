@@ -57,6 +57,9 @@ export const MainLayout: React.FC = () => {
     if (permission === "workflow:view") {
       return ["Admin", "Controller"].includes(user.role_name || "");
     }
+    if (permission === "keys:manage") {
+      return user.role_name === "Admin";
+    }
     return true;
   };
 
@@ -66,6 +69,7 @@ export const MainLayout: React.FC = () => {
     { to: "/subjects", label: "Subjects", icon: BookOpen, permission: "subjects:read" },
     { to: "/question-papers", label: "Question Papers", icon: FileText, permission: "questionpapers:read" },
     { to: "/approvals", label: "Approvals", icon: CheckBadge, permission: "workflow:view" },
+    { to: "/security", label: "Security", icon: Lock, permission: "keys:manage" },
     { to: "/users", label: "User Management", icon: Users, permission: "users:manage" },
     { to: "/roles", label: "Roles & Permissions", icon: KeyRound, permission: "roles:manage" },
     { to: "/audit", label: "Audit Logs", icon: History, permission: "audit:list" },

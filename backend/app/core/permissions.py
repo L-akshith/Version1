@@ -24,6 +24,7 @@ class Resource(str, Enum):
     SUBJECTS = "subjects"
     AUDIT = "audit"
     SYSTEM = "system"
+    KEYS = "keys"
 
 
 class Action(str, Enum):
@@ -94,6 +95,11 @@ DEFAULT_PERMISSIONS = [
     {"name": "system:manage", "resource": Resource.SYSTEM, "action": Action.MANAGE, "description": "System administration"},
     # Investigation
     {"name": "papers:investigate", "resource": Resource.PAPERS, "action": Action.INVESTIGATE, "description": "Investigate paper leaks"},
+    # Keys
+    {"name": "keys:create", "resource": Resource.KEYS, "action": Action.CREATE, "description": "Create encryption keys"},
+    {"name": "keys:read", "resource": Resource.KEYS, "action": Action.READ, "description": "Read encryption keys"},
+    {"name": "keys:update", "resource": Resource.KEYS, "action": Action.UPDATE, "description": "Update encryption keys"},
+    {"name": "keys:manage", "resource": Resource.KEYS, "action": Action.MANAGE, "description": "Manage encryption keys"},
 ]
 
 # ── Default Roles and their Permissions ──────────────────────────

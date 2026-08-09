@@ -214,6 +214,20 @@ async def get_approval_workflow_service(
     return ApprovalWorkflowService(session=session)
 
 
+async def get_key_provider() -> "KeyProvider":
+    """Return a KeyProvider instance (Local for now)."""
+    from app.modules.security.providers.local_provider import LocalKeyProvider
+    return LocalKeyProvider()
+
+
+async def get_key_management_service(
+    session: DBSession,
+) -> "KeyManagementService":
+    """Return a KeyManagementService instance."""
+    from app.modules.security.services.key_management_service import KeyManagementService
+    return KeyManagementService(session=session, provider=await get_key_provider())
+
+
 # ── Annotated Types for Convenience ──────────────────────────────
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]

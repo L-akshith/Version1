@@ -19,6 +19,7 @@ from app.models.exam import Exam
 from app.models.subject import Subject
 from app.models.question_paper import QuestionPaper
 from app.models.approval_workflow import ApprovalWorkflow
+from app.models.key_metadata import KeyMetadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

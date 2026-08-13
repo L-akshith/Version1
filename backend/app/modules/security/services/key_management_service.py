@@ -21,10 +21,16 @@ from app.modules.security.repositories.key_repository import KeyMetadataReposito
 class KeyManagementService:
     """Service to handle business operations related to key lifecycle."""
 
-    def __init__(self, session: AsyncSession, provider: KeyProvider) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        provider: KeyProvider,
+        crypto_provider=None,
+    ) -> None:
         self._session = session
         self._repo = KeyMetadataRepository(session)
         self._provider = provider
+        self._crypto_provider = crypto_provider
 
     async def _create_audit_entry(
         self,
@@ -61,6 +67,13 @@ class KeyManagementService:
         metadata = await self._provider.generate_key_metadata(
             algorithm=algorithm, purpose=purpose, created_by=str(user_id)
         )
+        if (
+            algorithm == Algorithm.RSA4096
+            and self._crypto_provider is not None
+):
+            await self._crypto_provider.generate_rsa_key(
+                metadata.key_identifier
+    )
         self._session.add(metadata)
         await self._session.flush()
 
@@ -134,6 +147,13 @@ class KeyManagementService:
         # Generate new version via provider
         new_key_metadata = await self._provider.rotate_key(old_key.key_identifier)
         new_key_metadata.created_by = user_id
+        if (
+            new_key_metadata.algorithm == Algorithm.RSA4096
+            and self._crypto_provider is not None
+        ):
+            await self._crypto_provider.generate_rsa_key(
+                new_key_metadata.key_identifier
+            )
         self._session.add(new_key_metadata)
         
         # Deactivate old key locally
@@ -151,3 +171,14 @@ class KeyManagementService:
             ip_address=ip_address,
         )
         return new_key_metadata
+
+async def generate_rsa_key(
+    self,
+    key_identifier: str,
+) -> None:
+    """
+    Generate and register an RSA-4096 key pair for development.
+
+    Private key remains in process memory.
+    """
+    self.register_key(key_identifier)

@@ -171,6 +171,13 @@ class QuestionPaper(UUIDMixin, TimestampMixin, Base):
         cascade="all, delete-orphan",
         order_by="desc(ApprovalWorkflow.created_at)",
     )
+    encrypted_metadata: Mapped[Optional["EncryptedPaperMetadata"]] = relationship(
+        "EncryptedPaperMetadata",
+        back_populates="question_paper",
+        lazy="selectin",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return (

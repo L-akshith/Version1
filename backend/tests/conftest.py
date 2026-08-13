@@ -31,6 +31,7 @@ from app.models.subject import Subject  # noqa: F401
 from app.models.question_paper import QuestionPaper  # noqa: F401
 from app.models.approval_workflow import ApprovalWorkflow  # noqa: F401
 from app.models.key_metadata import KeyMetadata  # noqa: F401
+from app.models.encrypted_paper_metadata import EncryptedPaperMetadata  # noqa: F401
 
 # Use in-memory SQLite for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

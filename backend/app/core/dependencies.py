@@ -20,6 +20,10 @@ from app.services.auth_service import AuthService
 from app.services.subject_service import SubjectService
 from app.services.user_service import UserService
 from app.utils.jwt import decode_token
+from app.modules.security.providers.local_crypto_provider import (
+    LocalCryptoKeyProvider,
+)
+local_crypto_provider = LocalCryptoKeyProvider()
 
 # ── Security Scheme ──────────────────────────────────────────────
 security_scheme = HTTPBearer(
@@ -27,6 +31,9 @@ security_scheme = HTTPBearer(
     description="Enter your JWT access token",
     auto_error=True,
 )
+def get_crypto_key_provider() -> LocalCryptoKeyProvider:
+    return local_crypto_provider
+
 
 # ── Type Aliases ─────────────────────────────────────────────────
 DBSession = Annotated[AsyncSession, Depends(get_async_session)]
@@ -223,9 +230,16 @@ async def get_key_provider() -> "KeyProvider":
 async def get_key_management_service(
     session: DBSession,
 ) -> "KeyManagementService":
-    """Return a KeyManagementService instance."""
-    from app.modules.security.services.key_management_service import KeyManagementService
-    return KeyManagementService(session=session, provider=await get_key_provider())
+
+    from app.modules.security.services.key_management_service import (
+        KeyManagementService,
+    )
+
+    return KeyManagementService(
+        session=session,
+        provider=await get_key_provider(),
+        crypto_provider=get_crypto_key_provider(),
+    )
 
 
 # ── Annotated Types for Convenience ──────────────────────────────

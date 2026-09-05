@@ -60,20 +60,32 @@ class KeyManagementService:
             raise NotFoundException(f"Key metadata '{key_id}' not found.")
         return key
 
+    async def get_active_wrapping_key(self) -> KeyMetadata:
+        """Get the active RSA4096 wrapping key."""
+        key = await self._repo.get_active_key(
+            purpose=KeyPurpose.WRAPPING, algorithm=Algorithm.RSA4096
+        )
+        if not key:
+            raise BadRequestException("No active RSA wrapping key available.")
+        return key
+
     async def generate_key(
         self, algorithm: Algorithm, purpose: KeyPurpose, user_id: uuid.UUID, ip_address: Optional[str] = None
     ) -> KeyMetadata:
         """Request the KMS to generate a new key and save its metadata."""
+        if algorithm == Algorithm.RSA4096 and self._crypto_provider is None:
+            raise BadRequestException("Crypto provider required for RSA4096 key generation.")
+            
         metadata = await self._provider.generate_key_metadata(
             algorithm=algorithm, purpose=purpose, created_by=str(user_id)
         )
-        if (
-            algorithm == Algorithm.RSA4096
-            and self._crypto_provider is not None
-):
-            await self._crypto_provider.generate_rsa_key(
-                metadata.key_identifier
-    )
+        if algorithm == Algorithm.RSA4096:
+            try:
+                await self._crypto_provider.generate_rsa_key(
+                    metadata.key_identifier
+                )
+            except Exception as e:
+                raise BadRequestException(f"Failed to generate RSA key: {e}")
         self._session.add(metadata)
         await self._session.flush()
 
@@ -93,6 +105,13 @@ class KeyManagementService:
         key = await self.get_key(key_id)
         if key.status != KeyStatus.INACTIVE:
             raise BadRequestException(f"Key is currently {key.status}, cannot activate.")
+
+        if key.algorithm == Algorithm.RSA4096:
+            if self._crypto_provider is None:
+                raise BadRequestException("Crypto provider required to activate RSA4096 key.")
+            is_available = await self._crypto_provider.validate_key_availability(key.key_identifier)
+            if not is_available:
+                raise BadRequestException(f"Private key for wrapping key '{key.key_identifier}' is not available locally.")
 
         # Activate on provider
         success = await self._provider.activate_key(key.key_identifier)
@@ -144,16 +163,20 @@ class KeyManagementService:
         """Rotate a key to a new version."""
         old_key = await self.get_key(key_id)
         
+        if old_key.algorithm == Algorithm.RSA4096 and self._crypto_provider is None:
+            raise BadRequestException("Crypto provider required for RSA4096 key rotation.")
+
         # Generate new version via provider
         new_key_metadata = await self._provider.rotate_key(old_key.key_identifier)
         new_key_metadata.created_by = user_id
-        if (
-            new_key_metadata.algorithm == Algorithm.RSA4096
-            and self._crypto_provider is not None
-        ):
-            await self._crypto_provider.generate_rsa_key(
-                new_key_metadata.key_identifier
-            )
+        
+        if new_key_metadata.algorithm == Algorithm.RSA4096:
+            try:
+                await self._crypto_provider.generate_rsa_key(
+                    new_key_metadata.key_identifier
+                )
+            except Exception as e:
+                raise BadRequestException(f"Failed to generate RSA key for rotation: {e}")
         self._session.add(new_key_metadata)
         
         # Deactivate old key locally
@@ -171,14 +194,3 @@ class KeyManagementService:
             ip_address=ip_address,
         )
         return new_key_metadata
-
-async def generate_rsa_key(
-    self,
-    key_identifier: str,
-) -> None:
-    """
-    Generate and register an RSA-4096 key pair for development.
-
-    Private key remains in process memory.
-    """
-    self.register_key(key_identifier)

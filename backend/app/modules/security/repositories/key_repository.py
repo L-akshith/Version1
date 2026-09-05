@@ -29,3 +29,22 @@ class KeyMetadataRepository(BaseRepository[KeyMetadata]):
         stmt = select(KeyMetadata).order_by(KeyMetadata.created_at.desc())
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_active_key(
+        self, purpose: "KeyPurpose", algorithm: "Algorithm"
+    ) -> KeyMetadata | None:
+        """Fetch the most recently activated key matching the criteria."""
+        from app.models.key_metadata import KeyStatus
+        
+        stmt = (
+            select(KeyMetadata)
+            .where(
+                KeyMetadata.status == KeyStatus.ACTIVE,
+                KeyMetadata.key_purpose == purpose,
+                KeyMetadata.algorithm == algorithm,
+            )
+            .order_by(KeyMetadata.activated_at.desc())
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()

@@ -77,12 +77,4 @@ class LocalKeyProvider(KeyProvider):
     async def get_key_metadata(self, key_identifier: str) -> KeyMetadata:
         if key_identifier in self._keys:
             return self._keys[key_identifier]
-        now = datetime.now(timezone.utc)
-        return KeyMetadata(
-            key_identifier=key_identifier,
-            algorithm=Algorithm.AES256_GCM,
-            key_purpose=KeyPurpose.ENCRYPTION,
-            key_version=1,
-            status=KeyStatus.ACTIVE,
-            activated_at=now,
-        )
+        raise KeyError(f"Key metadata '{key_identifier}' not found in LocalKeyProvider.")

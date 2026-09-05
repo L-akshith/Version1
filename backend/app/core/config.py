@@ -41,8 +41,10 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://examshield:examshield@localhost:5432/examshield"
     )
     DATABASE_ECHO: bool = False
-    DATABASE_POOL_SIZE: int = 20
-    DATABASE_MAX_OVERFLOW: int = 10
+    DB_POOL_SIZE: Optional[int] = None
+    DB_MAX_OVERFLOW: Optional[int] = None
+    DATABASE_POOL_SIZE: int = 5
+    DATABASE_MAX_OVERFLOW: int = 5
     DATABASE_POOL_TIMEOUT: int = 30
     DATABASE_POOL_RECYCLE: int = 1800
 
@@ -80,6 +82,16 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads/question_papers"
     MAX_UPLOAD_SIZE_MB: int = 50
 
+    # ── AWS & Production Cloud Infrastructure ─────────────────────
+    AWS_REGION: str = "us-east-1"
+    AWS_KMS_KEY_ID: Optional[str] = None
+    S3_BUCKET: Optional[str] = None
+    S3_PREFIX: str = "question_papers"
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    CRYPTO_PROVIDER: str = "local"  # "local" or "kms"
+    STORAGE_PROVIDER: str = "local"  # "local" or "s3"
+
     # ── Security (Placeholders for future cryptography) ──────────
     ENCRYPTION_KEY: Optional[str] = None
     SIGNING_KEY: Optional[str] = None
@@ -95,6 +107,11 @@ class Settings(BaseSettings):
     def validate_database_url(cls, v: str) -> str:
         if not v:
             raise ValueError("DATABASE_URL must be set")
+        # Railway PostgreSQL provides "postgres://" or "postgresql://"
+        if v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif v.startswith("postgresql://") and not v.startswith("postgresql+asyncpg://"):
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
         return v
 
     @field_validator("JWT_SECRET_KEY", mode="before")
@@ -111,13 +128,38 @@ class Settings(BaseSettings):
             )
         return v
 
+    def model_post_init(self, __context) -> None:
+        """Validate production configuration to fail fast if insecure."""
+        if self.DB_POOL_SIZE is not None:
+            self.DATABASE_POOL_SIZE = self.DB_POOL_SIZE
+        if self.DB_MAX_OVERFLOW is not None:
+            self.DATABASE_MAX_OVERFLOW = self.DB_MAX_OVERFLOW
+
+        if self.ENVIRONMENT.lower() == "production":
+            if self.DEBUG:
+                raise ValueError("DEBUG must be False in production environment")
+            if self.JWT_SECRET_KEY == "CHANGE-THIS-TO-A-LONG-RANDOM-SECRET-KEY-IN-PRODUCTION":
+                raise ValueError("Production mode requires explicit, strong JWT_SECRET_KEY")
+            if "*" in self.CORS_ORIGINS:
+                raise ValueError("Production mode forbids wildcard '*' CORS origin")
+            if self.CRYPTO_PROVIDER == "kms" and not self.AWS_KMS_KEY_ID:
+                raise ValueError("KMS crypto provider requires AWS_KMS_KEY_ID to be set in production")
+            if self.STORAGE_PROVIDER == "s3" and not self.S3_BUCKET:
+                raise ValueError("S3 storage provider requires S3_BUCKET to be set in production")
+
+
     @property
     def sync_database_url(self) -> str:
         """Return synchronous database URL for Alembic."""
-        return self.DATABASE_URL.replace("+asyncpg", "")
+        url = self.DATABASE_URL.replace("+asyncpg", "")
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
+
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Return cached application settings singleton."""
     return Settings()
+

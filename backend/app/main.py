@@ -19,6 +19,8 @@ from app.api.v1.approval_workflows import router as approval_workflows_router
 from app.api.v1.security_keys import router as security_keys_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.health import router as health_router
+from app.api.v1.centers import router as centers_router
+from app.api.v1.release import router as release_router
 from app.core.config import get_settings
 from app.exceptions.api_exception import register_exception_handlers
 from app.middleware.authentication import AuthenticationMiddleware
@@ -52,6 +54,17 @@ def create_app() -> FastAPI:
         allow_headers=settings.CORS_ALLOW_HEADERS,
     )
 
+    # Security Headers Middleware
+    @app.middleware("http")
+    async def add_security_headers(request, call_next):
+        response = await call_next(request)
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        return response
+
     # Custom Middlewares (executed in reverse order of addition)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(AuthenticationMiddleware)
@@ -70,6 +83,8 @@ def create_app() -> FastAPI:
     app.include_router(approval_workflows_router, prefix="/api/v1")
     app.include_router(security_keys_router, prefix="/api/v1")
     app.include_router(audit_router, prefix="/api/v1")
+    app.include_router(centers_router, prefix="/api/v1/centers", tags=["Centers"])
+    app.include_router(release_router, prefix="/api/v1/release", tags=["Release"])
 
     # Root route for basic landing page/health confirmation
     @app.get("/", tags=["General"])

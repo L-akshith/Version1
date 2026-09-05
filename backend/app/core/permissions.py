@@ -129,6 +129,7 @@ DEFAULT_ROLES = {
             "papers:create", "papers:read", "papers:update", "papers:list",
             "questionpapers:create", "questionpapers:read", "questionpapers:update",
             "workflow:view",
+            "exams:read", "exams:list",
             "subjects:read",
         ],
     },
@@ -138,6 +139,8 @@ DEFAULT_ROLES = {
             "papers:read", "papers:update", "papers:list",
             "questionpapers:read", "questionpapers:update",
             "workflow:view",
+            "exams:read", "exams:list",
+            "subjects:read",
         ],
     },
     "Moderator": {
@@ -146,6 +149,8 @@ DEFAULT_ROLES = {
             "papers:read", "papers:list", "papers:approve",
             "questionpapers:read",
             "workflow:approve", "workflow:reject", "workflow:return", "workflow:view",
+            "exams:read", "exams:list",
+            "subjects:read",
         ],
     },
     "Exam Center Officer": {
@@ -153,6 +158,8 @@ DEFAULT_ROLES = {
         "permissions": [
             "papers:read", "papers:list",
             "questionpapers:read",
+            "exams:read", "exams:list",
+            "subjects:read",
         ],
     },
     "Observer": {

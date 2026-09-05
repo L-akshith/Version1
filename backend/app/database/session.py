@@ -17,6 +17,10 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
+connect_args = {}
+if settings.ENVIRONMENT.lower() == "production" or "ssl=require" in settings.DATABASE_URL:
+    connect_args["ssl"] = "require"
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DATABASE_ECHO,
@@ -25,6 +29,7 @@ engine = create_async_engine(
     pool_timeout=settings.DATABASE_POOL_TIMEOUT,
     pool_recycle=settings.DATABASE_POOL_RECYCLE,
     pool_pre_ping=True,
+    connect_args=connect_args,
 )
 
 async_session_factory = async_sessionmaker(

@@ -32,6 +32,7 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.ForeignKeyConstraint(['question_paper_id'], ['question_papers.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['key_identifier'], ['key_metadata.key_identifier'], ondelete='RESTRICT'),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_encrypted_paper_metadata_id'), 'encrypted_paper_metadata', ['id'], unique=False)

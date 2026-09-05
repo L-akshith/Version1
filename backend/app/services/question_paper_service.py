@@ -48,12 +48,16 @@ class QuestionPaperService:
         self,
         session: AsyncSession,
         storage_provider: StorageInterface,
+        encrypted_paper_service: "EncryptedPaperService",
+        key_management_service: "KeyManagementService",
     ) -> None:
         self._session = session
         self._storage_provider = storage_provider
         self._paper_repo = QuestionPaperRepository(session)
         self._subject_repo = SubjectRepository(session)
         self._hash_service = HashService()
+        self._encrypted_paper_service = encrypted_paper_service
+        self._key_management_service = key_management_service
 
     # ── Private Helpers ──────────────────────────────────────────
 
@@ -182,7 +186,10 @@ class QuestionPaperService:
         )
         new_version = latest_version + 1
 
-        # 2. Prepare file data and filenames
+        # 2. Get active wrapping key
+        active_key = await self._key_management_service.get_active_wrapping_key()
+
+        # 3. Prepare file data and filenames
         file_content = await file.read()
         file_size = len(file_content)
         original_filename = file.filename or "unknown.pdf"
@@ -190,15 +197,13 @@ class QuestionPaperService:
         # System filename: <paper_code>_v<version>_<uuid>.pdf
         file_uuid = str(uuid.uuid4())[:8]
         system_filename = f"{upload_data.paper_code}_v{new_version}_{file_uuid}.pdf"
-        destination_path = f"{upload_data.subject_id}/{system_filename}"
 
-        # 3. Store file via abstracted StorageInterface
-        storage_path = await self._storage_provider.save(file_content, destination_path)
-
-        # 4. Generate SHA-256 hash for integrity
+        # 4. Generate SHA-256 hash for integrity (on plaintext)
         file_hash = self._hash_service.generate_sha256(file_content)
 
-        # 5. Create database record
+        # 5. Create database record with a temporary placeholder storage_path
+        # We must create it first because EncryptedPaperService needs its UUID.
+        # This occurs within the existing AsyncSession transaction.
         paper_data: Dict[str, Any] = {
             "subject_id": upload_data.subject_id,
             "paper_code": upload_data.paper_code,
@@ -208,7 +213,7 @@ class QuestionPaperService:
             "status": QuestionPaperStatus.UPLOADED,  # Initial status
             "file_name": system_filename,
             "original_file_name": original_filename,
-            "storage_path": storage_path,
+            "storage_path": "pending_encryption",
             "mime_type": file.content_type or "application/pdf",
             "file_size": file_size,
             "sha256_hash": file_hash,
@@ -216,23 +221,48 @@ class QuestionPaperService:
         }
 
         paper = await self._paper_repo.create(paper_data)
-        paper = await self._paper_repo.get_with_relations(paper.id)
+        
+        # 6. Encrypt the paper and save encrypted artifact
+        try:
+            enc_result = await self._encrypted_paper_service.encrypt_question_paper(
+                question_paper_id=paper.id,
+                plaintext_content=file_content,
+                key_identifier=active_key.key_identifier,
+                user_id=user_id,
+                ip_address=ip_address,
+            )
+            
+            # 7. Update storage_path to the encrypted path
+            await self._paper_repo.update(paper.id, {"storage_path": enc_result.encrypted_storage_path})
+            
+            # Flush to ensure everything is written to DB within the transaction
+            await self._session.flush()
+            
+            paper = await self._paper_repo.get_with_relations(paper.id)
 
-        # 6. Generate Audit Log
-        action = "paper_uploaded" if new_version == 1 else "paper_version_uploaded"
-        await self._create_audit_entry(
-            user_id=user_id,
-            action=action,
-            resource_id=str(paper.id),
-            details={
-                "paper_code": paper.paper_code,
-                "version": paper.version,
-                "subject_id": str(paper.subject_id),
-                "sha256_hash": paper.sha256_hash,
-                "file_size": paper.file_size,
-            },
-            ip_address=ip_address,
-        )
+            # 8. Generate Audit Log
+            action = "paper_uploaded" if new_version == 1 else "paper_version_uploaded"
+            await self._create_audit_entry(
+                user_id=user_id,
+                action=action,
+                resource_id=str(paper.id),
+                details={
+                    "paper_code": paper.paper_code,
+                    "version": paper.version,
+                    "subject_id": str(paper.subject_id),
+                    "sha256_hash": paper.sha256_hash,
+                    "file_size": paper.file_size,
+                },
+                ip_address=ip_address,
+            )
+            
+        except Exception:
+            # If anything fails after the DB record was created (e.g., encryption failed, 
+            # audit failed, or update failed), we must clean up any potentially written 
+            # encrypted artifact to prevent orphaned files. The DB transaction will rollback.
+            if "enc_result" in locals() and enc_result:
+                await self._storage_provider.delete(enc_result.encrypted_storage_path)
+            raise
 
         return self._to_response(paper)
 
@@ -326,6 +356,15 @@ class QuestionPaperService:
                 message=f"Question Paper with ID '{paper_id}' not found"
             )
 
+        if paper.status in (
+            QuestionPaperStatus.ENCRYPTED,
+            QuestionPaperStatus.SCHEDULED,
+            QuestionPaperStatus.RELEASED,
+        ):
+            raise BadRequestException(
+                message=f"Cannot update a paper in '{paper.status}' status. It is locked."
+            )
+
         data: Dict[str, Any] = update_data.model_dump(exclude_unset=True)
 
         if "status" in data:
@@ -387,7 +426,13 @@ class QuestionPaperService:
                 message=f"Question Paper with ID '{paper_id}' not found"
             )
 
-        if paper.status in (QuestionPaperStatus.APPROVED, QuestionPaperStatus.ARCHIVED):
+        if paper.status in (
+            QuestionPaperStatus.APPROVED,
+            QuestionPaperStatus.ENCRYPTED,
+            QuestionPaperStatus.SCHEDULED,
+            QuestionPaperStatus.RELEASED,
+            QuestionPaperStatus.ARCHIVED,
+        ):
             raise BadRequestException(
                 message=f"Cannot delete a paper in '{paper.status}' status. "
                         "It must be retained for audit compliance."
@@ -428,6 +473,9 @@ class QuestionPaperService:
             uploaded=status_counts.get(QuestionPaperStatus.UPLOADED, 0),
             under_review=status_counts.get(QuestionPaperStatus.UNDER_REVIEW, 0),
             approved=status_counts.get(QuestionPaperStatus.APPROVED, 0),
+            encrypted=status_counts.get(QuestionPaperStatus.ENCRYPTED, 0),
+            scheduled=status_counts.get(QuestionPaperStatus.SCHEDULED, 0),
+            released=status_counts.get(QuestionPaperStatus.RELEASED, 0),
             rejected=status_counts.get(QuestionPaperStatus.REJECTED, 0),
             archived=status_counts.get(QuestionPaperStatus.ARCHIVED, 0),
         )

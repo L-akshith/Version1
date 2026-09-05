@@ -46,3 +46,32 @@ async def test_rsa_key_can_be_registered_and_used():
 
     assert unwrapped == aes_key
     assert wrapped != aes_key
+
+@pytest.mark.asyncio
+async def test_crypto_provider_persistence():
+    provider = LocalCryptoKeyProvider()
+    key_identifier = f"localkms-{uuid.uuid4()}"
+    await provider.generate_rsa_key(key_identifier)
+
+    assert await provider.validate_key_availability(key_identifier)
+
+    # Clear memory cache
+    del provider._private_keys[key_identifier]
+    
+    assert await provider.validate_key_availability(key_identifier)
+
+    # Should still be able to use it
+    aes_key = b"0123456789abcdef0123456789abcdef"
+    wrapped = await provider.wrap_key(key_identifier, aes_key)
+    unwrapped = await provider.unwrap_key(key_identifier, wrapped)
+    assert unwrapped == aes_key
+
+@pytest.mark.asyncio
+async def test_unwrap_missing_key_raises_key_error():
+    provider = LocalCryptoKeyProvider()
+    key_identifier = "nonexistent-key"
+    
+    assert not await provider.validate_key_availability(key_identifier)
+
+    with pytest.raises(KeyError, match="not found"):
+        await provider.unwrap_key(key_identifier, b"fake_wrapped")

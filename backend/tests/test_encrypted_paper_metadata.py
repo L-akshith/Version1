@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from app.models.exam import Exam, ExamStatus
 from app.models.subject import Subject
 from app.models.question_paper import QuestionPaper, QuestionPaperStatus
+from app.models.key_metadata import KeyMetadata, Algorithm, KeyPurpose, KeyStatus
 from app.models.encrypted_paper_metadata import EncryptedPaperMetadata
 from app.repositories.encrypted_paper_metadata_repository import EncryptedPaperMetadataRepository
 from app.models.user import User
@@ -59,18 +60,28 @@ async def create_prerequisites(db_session: AsyncSession):
         uploaded_by=user.id
     )
     db_session.add(paper)
+    
+    key_meta = KeyMetadata(
+        key_identifier="rsa-key-v1-test",
+        algorithm=Algorithm.RSA4096,
+        key_purpose=KeyPurpose.WRAPPING,
+        status=KeyStatus.ACTIVE,
+        created_by=user.id
+    )
+    db_session.add(key_meta)
+    
     await db_session.flush()
 
-    return paper
+    return paper, key_meta
 
 async def test_create_encrypted_metadata(db_session: AsyncSession):
     """Test metadata creation, key_identifier persistence, encrypted artifact persistence"""
     repo = EncryptedPaperMetadataRepository(db_session)
-    paper = await create_prerequisites(db_session)
+    paper, key_meta = await create_prerequisites(db_session)
 
     metadata_data = {
         "question_paper_id": paper.id,
-        "key_identifier": "rsa-key-v1-test",
+        "key_identifier": key_meta.key_identifier,
         "encryption_algorithm": "AES256_GCM",
         "nonce": "test-nonce-1234",
         "wrapped_key": "wrapped-aes-key-base64",
@@ -99,12 +110,12 @@ async def test_create_encrypted_metadata(db_session: AsyncSession):
 async def test_rejection_of_missing_required_fields(db_session: AsyncSession):
     """Test rejection when required fields are missing"""
     repo = EncryptedPaperMetadataRepository(db_session)
-    paper = await create_prerequisites(db_session)
+    paper, key_meta = await create_prerequisites(db_session)
 
     # Missing wrapped_key
     metadata_data = {
         "question_paper_id": paper.id,
-        "key_identifier": "rsa-key-v1-test",
+        "key_identifier": key_meta.key_identifier,
         "encryption_algorithm": "AES256_GCM",
         "nonce": "test-nonce-1234",
         "encrypted_storage_path": "/s3/secure/test.enc",

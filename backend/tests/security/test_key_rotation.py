@@ -3,6 +3,8 @@ import uuid
 import pytest
 
 from app.models.key_metadata import Algorithm, KeyPurpose
+from app.models.user import User
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.security.providers.local_crypto_provider import (
     LocalCryptoKeyProvider,
 )
@@ -16,7 +18,7 @@ from app.modules.security.services.key_management_service import (
 
 @pytest.mark.asyncio
 async def test_rsa_key_rotation_preserves_algorithm_and_purpose(
-    db_session,
+    db_session: AsyncSession, test_admin: User
 ):
     metadata_provider = LocalKeyProvider()
     crypto_provider = LocalCryptoKeyProvider()
@@ -27,7 +29,7 @@ async def test_rsa_key_rotation_preserves_algorithm_and_purpose(
         crypto_provider=crypto_provider,
     )
 
-    user_id = uuid.uuid4()
+    user_id = test_admin.id
 
     original = await service.generate_key(
         algorithm=Algorithm.RSA4096,
@@ -48,7 +50,7 @@ async def test_rsa_key_rotation_preserves_algorithm_and_purpose(
 
 @pytest.mark.asyncio
 async def test_rotated_rsa_key_is_usable(
-    db_session,
+    db_session: AsyncSession, test_admin: User
 ):
     metadata_provider = LocalKeyProvider()
     crypto_provider = LocalCryptoKeyProvider()
@@ -62,12 +64,12 @@ async def test_rotated_rsa_key_is_usable(
     original = await service.generate_key(
         algorithm=Algorithm.RSA4096,
         purpose=KeyPurpose.WRAPPING,
-        user_id=uuid.uuid4(),
+        user_id=test_admin.id,
     )
 
     rotated = await service.rotate_key(
         key_id=original.id,
-        user_id=uuid.uuid4(),
+        user_id=test_admin.id,
     )
 
     aes_key = b"0123456789abcdef0123456789abcdef"

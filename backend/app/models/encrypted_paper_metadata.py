@@ -30,6 +30,9 @@ class EncryptedPaperMetadata(UUIDMixin, TimestampMixin, Base):
     Stores the RSA-wrapped AES session key, the AES-GCM nonce, and the
     path to the encrypted artifact. It does NOT store the plaintext paper,
     the RSA private key, or the plaintext AES key.
+
+    Note: `nonce` and `wrapped_key` must be encoded as Base64 strings 
+    by the application layer before being persisted to the database.
     """
 
     __tablename__ = "encrypted_paper_metadata"
@@ -44,6 +47,7 @@ class EncryptedPaperMetadata(UUIDMixin, TimestampMixin, Base):
     
     key_identifier: Mapped[str] = mapped_column(
         String(255),
+        ForeignKey("key_metadata.key_identifier", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )

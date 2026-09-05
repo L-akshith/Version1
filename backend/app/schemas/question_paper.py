@@ -119,5 +119,8 @@ class QuestionPaperStatistics(BaseModel):
     uploaded: int = Field(default=0, description="Number of uploaded papers")
     under_review: int = Field(default=0, description="Number of papers under review")
     approved: int = Field(default=0, description="Number of approved papers")
+    encrypted: int = Field(default=0, description="Number of encrypted papers")
+    scheduled: int = Field(default=0, description="Number of scheduled papers")
+    released: int = Field(default=0, description="Number of released papers")
     rejected: int = Field(default=0, description="Number of rejected papers")
     archived: int = Field(default=0, description="Number of archived papers")

@@ -32,16 +32,25 @@ class QuestionPaperStatus:
     UPLOADED = "uploaded"
     UNDER_REVIEW = "under_review"
     APPROVED = "approved"
+    ENCRYPTED = "encrypted"
+    SCHEDULED = "scheduled"
+    RELEASED = "released"
     REJECTED = "rejected"
     ARCHIVED = "archived"
 
-    ALL = {DRAFT, UPLOADED, UNDER_REVIEW, APPROVED, REJECTED, ARCHIVED}
+    ALL = {
+        DRAFT, UPLOADED, UNDER_REVIEW, APPROVED, ENCRYPTED,
+        SCHEDULED, RELEASED, REJECTED, ARCHIVED
+    }
 
     TRANSITIONS = {
         DRAFT: {UPLOADED},
         UPLOADED: {UNDER_REVIEW},
         UNDER_REVIEW: {APPROVED, REJECTED},
-        APPROVED: {ARCHIVED},
+        APPROVED: {ENCRYPTED, ARCHIVED},
+        ENCRYPTED: {SCHEDULED, ARCHIVED},
+        SCHEDULED: {RELEASED, ARCHIVED},
+        RELEASED: {ARCHIVED},
         REJECTED: {DRAFT},
         ARCHIVED: set(),
     }

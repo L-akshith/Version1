@@ -48,8 +48,10 @@ class QuestionPaperRepository(BaseRepository[QuestionPaper]):
                 selectinload(QuestionPaper.subject).selectinload(Subject.exam),
                 selectinload(QuestionPaper.uploader),
                 selectinload(QuestionPaper.approver),
+                selectinload(QuestionPaper.encrypted_metadata),
             )
             .where(QuestionPaper.id == paper_id)
+            .execution_options(populate_existing=True)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()

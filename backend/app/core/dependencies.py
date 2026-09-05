@@ -20,10 +20,44 @@ from app.services.auth_service import AuthService
 from app.services.subject_service import SubjectService
 from app.services.user_service import UserService
 from app.utils.jwt import decode_token
-from app.modules.security.providers.local_crypto_provider import (
-    LocalCryptoKeyProvider,
+from app.modules.security.interfaces.crypto_key_provider import (
+    CryptoKeyProvider,
 )
-local_crypto_provider = LocalCryptoKeyProvider()
+from app.storage.storage_interface import StorageInterface
+
+_crypto_provider_instance = None
+_storage_provider_instance = None
+
+
+def get_crypto_key_provider() -> CryptoKeyProvider:
+    """Return the configured CryptoKeyProvider singleton (LocalCryptoKeyProvider or AWSKMSCryptoKeyProvider)."""
+    global _crypto_provider_instance
+    if _crypto_provider_instance is None:
+        from app.core.config import get_settings
+
+        settings = get_settings()
+        if settings.CRYPTO_PROVIDER.lower() == "kms" or (
+            settings.ENVIRONMENT.lower() == "production"
+            and settings.CRYPTO_PROVIDER.lower() != "local"
+        ):
+            from app.modules.security.providers.kms_crypto_provider import (
+                AWSKMSCryptoKeyProvider,
+            )
+
+            _crypto_provider_instance = AWSKMSCryptoKeyProvider(
+                region_name=settings.AWS_REGION,
+                kms_key_id=settings.AWS_KMS_KEY_ID,
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            )
+        else:
+            from app.modules.security.providers.local_crypto_provider import (
+                LocalCryptoKeyProvider,
+            )
+
+            _crypto_provider_instance = LocalCryptoKeyProvider()
+    return _crypto_provider_instance
+
 
 # ── Security Scheme ──────────────────────────────────────────────
 security_scheme = HTTPBearer(
@@ -31,8 +65,6 @@ security_scheme = HTTPBearer(
     description="Enter your JWT access token",
     auto_error=True,
 )
-def get_crypto_key_provider() -> LocalCryptoKeyProvider:
-    return local_crypto_provider
 
 
 # ── Type Aliases ─────────────────────────────────────────────────
@@ -194,12 +226,34 @@ async def get_subject_service(session: DBSession) -> SubjectService:
     return SubjectService(session)
 
 
-def get_storage_provider() -> "StorageInterface":
-    """Return a StorageInterface instance."""
-    from app.storage.local_storage import LocalStorageProvider
-    from app.core.config import get_settings
-    settings = get_settings()
-    return LocalStorageProvider(base_dir=settings.UPLOAD_DIR)
+def get_storage_provider() -> StorageInterface:
+    """Return configured StorageInterface (LocalStorageProvider or S3StorageProvider)."""
+    global _storage_provider_instance
+    if _storage_provider_instance is None:
+        from app.core.config import get_settings
+
+        settings = get_settings()
+        if settings.STORAGE_PROVIDER.lower() == "s3" or (
+            settings.ENVIRONMENT.lower() == "production"
+            and settings.STORAGE_PROVIDER.lower() != "local"
+        ):
+            from app.storage.s3_storage import S3StorageProvider
+
+            _storage_provider_instance = S3StorageProvider(
+                bucket_name=settings.S3_BUCKET,
+                region_name=settings.AWS_REGION,
+                prefix=settings.S3_PREFIX,
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                kms_key_id=settings.AWS_KMS_KEY_ID,
+            )
+        else:
+            from app.storage.local_storage import LocalStorageProvider
+
+            _storage_provider_instance = LocalStorageProvider(
+                base_dir=settings.UPLOAD_DIR
+            )
+    return _storage_provider_instance
 
 
 async def get_question_paper_service(
@@ -210,6 +264,8 @@ async def get_question_paper_service(
     return QuestionPaperService(
         session=session,
         storage_provider=get_storage_provider(),
+        encrypted_paper_service=await get_encrypted_paper_service(session),
+        key_management_service=await get_key_management_service(session),
     )
 
 
@@ -221,10 +277,16 @@ async def get_approval_workflow_service(
     return ApprovalWorkflowService(session=session)
 
 
+_local_key_provider = None
+
+
 async def get_key_provider() -> "KeyProvider":
     """Return a KeyProvider instance (Local for now)."""
-    from app.modules.security.providers.local_provider import LocalKeyProvider
-    return LocalKeyProvider()
+    global _local_key_provider
+    if _local_key_provider is None:
+        from app.modules.security.providers.local_provider import LocalKeyProvider
+        _local_key_provider = LocalKeyProvider()
+    return _local_key_provider
 
 
 async def get_key_management_service(
@@ -239,6 +301,19 @@ async def get_key_management_service(
         session=session,
         provider=await get_key_provider(),
         crypto_provider=get_crypto_key_provider(),
+    )
+
+
+async def get_encrypted_paper_service(
+    session: DBSession,
+) -> "EncryptedPaperService":
+    """Return an EncryptedPaperService instance."""
+    from app.services.encrypted_paper_service import EncryptedPaperService
+
+    return EncryptedPaperService(
+        session=session,
+        crypto_provider=get_crypto_key_provider(),
+        storage_provider=get_storage_provider(),
     )
 
 

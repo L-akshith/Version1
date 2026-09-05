@@ -7,6 +7,13 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
+import sys
+from pathlib import Path
+
+sys.path.insert(
+    0,
+    str(Path(__file__).resolve().parents[1])
+)
 # Import settings and metadata
 from app.core.config import get_settings
 from app.database.base import Base

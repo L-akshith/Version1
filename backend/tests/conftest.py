@@ -17,10 +17,19 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import StaticPool
 
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from app.database.base import Base
 from app.database.session import get_async_session
 from app.main import app
 from app.database.seed import seed_permissions, seed_roles, seed_superuser
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
 # Import all models so they are registered on Base.metadata for table creation
 from app.models.user import User  # noqa: F401
 from app.models.role import Role  # noqa: F401
@@ -32,6 +41,16 @@ from app.models.question_paper import QuestionPaper  # noqa: F401
 from app.models.approval_workflow import ApprovalWorkflow  # noqa: F401
 from app.models.key_metadata import KeyMetadata  # noqa: F401
 from app.models.encrypted_paper_metadata import EncryptedPaperMetadata  # noqa: F401
+import app.modules.security.providers.local_crypto_provider as local_crypto_provider_mod
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_local_keys_dir(tmp_path_factory):
+    """Ensure all tests use a temporary directory for RSA key persistence."""
+    test_keys_dir = tmp_path_factory.mktemp("local_keys")
+    original_dir = local_crypto_provider_mod._DEFAULT_KEY_DIR
+    local_crypto_provider_mod._DEFAULT_KEY_DIR = test_keys_dir
+    yield
+    local_crypto_provider_mod._DEFAULT_KEY_DIR = original_dir
 
 # Use in-memory SQLite for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -106,6 +125,13 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides.clear()
 
 
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Clear the rate limiter in-memory state before each test to ensure test isolation."""
+    from app.middleware.rate_limit import RateLimitMiddleware
+    RateLimitMiddleware.clear_state()
+
+
 import uuid
 from datetime import date
 from sqlalchemy import select
@@ -154,23 +180,70 @@ async def test_subject(db_session: AsyncSession, test_admin: User, test_exam: Ex
     return subject
 
 @pytest_asyncio.fixture
-async def test_paper(db_session: AsyncSession, test_admin: User, test_subject: Subject) -> QuestionPaper:
+async def test_paper(db_session: AsyncSession, test_subject: Subject, test_admin: User) -> QuestionPaper:
     paper = QuestionPaper(
         id=uuid.uuid4(),
         subject_id=test_subject.id,
-        paper_code="MATH-101",
-        title="Mathematics Base",
+        paper_code="TEST-PHY-1",
+        title="Test Paper",
         version=1,
         status=QuestionPaperStatus.UPLOADED,
-        file_name="MATH-101_v1_uuid.pdf",
-        original_file_name="math.pdf",
-        storage_path="path/to/math.pdf",
+        file_name="TEST-PHY-1_v1.pdf",
+        original_file_name="original.pdf",
+        storage_path="test/path.pdf",
         mime_type="application/pdf",
         file_size=1024,
-        sha256_hash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        sha256_hash="fakehash",
         uploaded_by=test_admin.id,
     )
     db_session.add(paper)
-    await db_session.commit()
+    await db_session.flush()
     await db_session.refresh(paper)
     return paper
+
+@pytest_asyncio.fixture(autouse=True)
+async def setup_active_rsa_key(db_session: AsyncSession, test_admin: User) -> None:
+    """Ensure an active RSA wrapping key is available for all tests."""
+    from app.models.key_metadata import KeyMetadata, Algorithm, KeyPurpose, KeyStatus
+    from app.modules.security.providers.local_crypto_provider import LocalCryptoKeyProvider
+    from app.core.dependencies import get_crypto_key_provider
+    import datetime
+
+    # Check if one already exists
+    from sqlalchemy import select
+    stmt = select(KeyMetadata).where(
+        KeyMetadata.status == KeyStatus.ACTIVE,
+        KeyMetadata.key_purpose == KeyPurpose.WRAPPING,
+        KeyMetadata.algorithm == Algorithm.RSA4096
+    )
+    result = await db_session.execute(stmt)
+    if result.scalar_one_or_none():
+        return
+
+    key_id = f"test-rsa-key-{uuid.uuid4()}"
+    
+    # 1. Generate RSA key material
+    crypto_provider = get_crypto_key_provider()
+    try:
+        await crypto_provider.generate_rsa_key(key_id)
+    except ValueError:
+        pass
+    
+    # 2. Add metadata
+    metadata = KeyMetadata(
+        id=uuid.uuid4(),
+        key_identifier=key_id,
+        algorithm=Algorithm.RSA4096,
+        key_purpose=KeyPurpose.WRAPPING,
+        key_version=1,
+        status=KeyStatus.ACTIVE,
+        activated_at=datetime.datetime.now(datetime.timezone.utc),
+        created_by=test_admin.id
+    )
+    db_session.add(metadata)
+    await db_session.flush()
+
+@pytest.fixture
+def local_crypto_provider():
+    from app.core.dependencies import get_crypto_key_provider
+    return get_crypto_key_provider()

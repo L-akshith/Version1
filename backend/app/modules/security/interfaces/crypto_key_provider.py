@@ -54,3 +54,14 @@ class CryptoKeyProvider(ABC):
         key_identifier: str,
     ) -> None:
         pass
+
+    @abstractmethod
+    async def validate_key_availability(
+        self,
+        key_identifier: str,
+    ) -> bool:
+        """
+        Verify that a cryptographic key with the given identifier exists
+        and is available for operations (e.g., has a local PEM file).
+        """
+        pass

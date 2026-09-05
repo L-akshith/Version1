@@ -31,12 +31,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     rate limiting.
     """
 
+    # Class-level state to allow resetting in test environments
+    _requests_state: Dict[str, List[float]] = defaultdict(list)
+
     def __init__(self, app, max_requests: int = 100, window_seconds: int = 60):
         super().__init__(app)
         self.max_requests = max_requests
         self.window_seconds = window_seconds
-        # Stores {client_ip: [(timestamp, ...)] }
-        self._requests: Dict[str, List[float]] = defaultdict(list)
+        self._requests = self._requests_state
+
+    @classmethod
+    def clear_state(cls) -> None:
+        """Clear the rate limiter state. Intended for test isolation."""
+        cls._requests_state.clear()
 
     def _clean_old_requests(self, client_ip: str, now: float) -> None:
         """Remove request timestamps outside the current window."""

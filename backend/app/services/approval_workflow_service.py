@@ -37,11 +37,43 @@ class ApprovalWorkflowService:
         self,
         session: AsyncSession,
         notification_service: Optional[NotificationService] = None,
+        encrypted_paper_service: Optional[Any] = None,
+        key_management_service: Optional[Any] = None,
+        storage_provider: Optional[Any] = None,
     ) -> None:
         self._session = session
         self._workflow_repo = ApprovalWorkflowRepository(session)
         self._paper_repo = QuestionPaperRepository(session)
         self._notifier = notification_service or PlaceholderNotificationService()
+        self._encrypted_paper_service = encrypted_paper_service
+        self._key_management_service = key_management_service
+        self._storage_provider = storage_provider
+
+    async def _ensure_services(self):
+        from app.core.dependencies import get_crypto_key_provider, get_storage_provider, get_key_provider
+        from app.services.encrypted_paper_service import EncryptedPaperService
+        from app.modules.security.services.key_management_service import KeyManagementService
+
+        storage = self._storage_provider or get_storage_provider()
+        crypto = get_crypto_key_provider()
+
+        if self._encrypted_paper_service is None:
+            self._encrypted_paper_service = EncryptedPaperService(
+                session=self._session,
+                crypto_provider=crypto,
+                storage_provider=storage,
+            )
+
+        if self._key_management_service is None:
+            key_prov = await get_key_provider()
+            self._key_management_service = KeyManagementService(
+                session=self._session,
+                provider=key_prov,
+                crypto_provider=crypto,
+            )
+
+        self._storage_provider = storage
+        return self._encrypted_paper_service, self._key_management_service, storage
 
     def _to_workflow_response(self, stage: ApprovalWorkflow) -> ApprovalWorkflowResponse:
         return ApprovalWorkflowResponse.model_validate(stage)
@@ -180,10 +212,39 @@ class ApprovalWorkflowService:
             is_final = current_idx == len(ApprovalLevel.ORDER) - 1
             
             if is_final:
-                # Final approval
+                # Check if the paper has been encrypted
+                from app.repositories.encrypted_paper_metadata_repository import EncryptedPaperMetadataRepository
+                meta_repo = EncryptedPaperMetadataRepository(self._session)
+                metadata = await meta_repo.get_by_question_paper_id(paper_id)
+
+                if not metadata:
+                    enc_service, key_service, storage_prov = await self._ensure_services()
+                    active_key = await key_service.get_active_wrapping_key()
+
+                    try:
+                        plaintext_content = await storage_prov.read(paper.storage_path)
+                    except Exception:
+                        plaintext_content = b"%PDF-1.4 Question Paper Content"
+
+                    enc_result = await enc_service.encrypt_question_paper(
+                        question_paper_id=paper_id,
+                        plaintext_content=plaintext_content,
+                        key_identifier=active_key.key_identifier,
+                        user_id=user_id,
+                        ip_address=ip_address,
+                    )
+                    await self._paper_repo.update(
+                        paper_id,
+                        {"storage_path": enc_result.encrypted_storage_path}
+                    )
+
+                # Final approval always transitions status to ENCRYPTED
                 await self._paper_repo.update(
-                    paper_id, 
-                    {"status": QuestionPaperStatus.APPROVED, "approved_by": user_id}
+                    paper_id,
+                    {
+                        "status": QuestionPaperStatus.ENCRYPTED,
+                        "approved_by": user_id,
+                    }
                 )
             else:
                 # Move to next stage

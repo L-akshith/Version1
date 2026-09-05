@@ -14,6 +14,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin, UUIDMixin
+from app.models.exam_center_association import ExamCenterAssociation
 
 
 class ExamStatus:
@@ -104,6 +105,12 @@ class Exam(UUIDMixin, TimestampMixin, Base):
         back_populates="exam",
         lazy="selectin",
         cascade="all, delete-orphan",
+    )
+    authorized_centers: Mapped[List["ExaminationCenter"]] = relationship(
+        "ExaminationCenter",
+        secondary=ExamCenterAssociation.__table__,
+        back_populates="exams",
+        lazy="selectin",
     )
 
     def __repr__(self) -> str:

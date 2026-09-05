@@ -21,7 +21,7 @@ redis==5.0.7
 httpx==0.27.0
 
 # AWS & Cloud Integration
-boto3==1.34.131
+boto3==1.34.106
 aioboto3==13.0.1
 
 # Utilities

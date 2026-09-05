@@ -11,7 +11,11 @@ import {
   LogOut,
   Menu,
   ClipboardList,
-  BookOpen
+  BookOpen,
+  BadgeCheck,
+  Lock,
+  Building2,
+  Rocket
 } from "lucide-react";
 
 export const MainLayout: React.FC = () => {
@@ -60,6 +64,12 @@ export const MainLayout: React.FC = () => {
     if (permission === "keys:manage") {
       return user.role_name === "Admin";
     }
+    if (permission === "system:manage") {
+      return user.role_name === "Admin" || user.role_name === "Controller";
+    }
+    if (permission === "papers:release") {
+      return user.role_name === "Controller";
+    }
     return true;
   };
 
@@ -68,7 +78,9 @@ export const MainLayout: React.FC = () => {
     { to: "/exams", label: "Exams", icon: ClipboardList, permission: "exams:read" },
     { to: "/subjects", label: "Subjects", icon: BookOpen, permission: "subjects:read" },
     { to: "/question-papers", label: "Question Papers", icon: FileText, permission: "questionpapers:read" },
-    { to: "/approvals", label: "Approvals", icon: CheckBadge, permission: "workflow:view" },
+    { to: "/approvals", label: "Approvals", icon: BadgeCheck, permission: "workflow:view" },
+    { to: "/releases", label: "Release Dashboard", icon: Rocket, permission: "papers:release" },
+    { to: "/centers", label: "Exam Centers", icon: Building2, permission: "system:manage" },
     { to: "/security", label: "Security", icon: Lock, permission: "keys:manage" },
     { to: "/users", label: "User Management", icon: Users, permission: "users:manage" },
     { to: "/roles", label: "Roles & Permissions", icon: KeyRound, permission: "roles:manage" },

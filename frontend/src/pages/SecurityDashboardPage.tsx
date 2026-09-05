@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../services/api';
-import { Algorithm, KeyPurpose, KeyStatus, KeyMetadata } from '../types/security';
+import { useEffect, useState } from 'react';
+import api from '../services/api';
+import type { KeyMetadata } from '../types/security';
 
-export default function SecurityDashboardPage() {
+export const SecurityDashboardPage = () => {
   const [keys, setKeys] = useState<KeyMetadata[]>([]);
   const [loading, setLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -27,8 +27,8 @@ export default function SecurityDashboardPage() {
     setIsGenerating(true);
     try {
       await api.post('/security/keys', {
-        algorithm: Algorithm.AES256_GCM,
-        key_purpose: KeyPurpose.ENCRYPTION,
+        algorithm: "RSA4096",
+        key_purpose: "Wrapping",
       });
       fetchKeys();
     } catch (error) {
@@ -47,14 +47,14 @@ export default function SecurityDashboardPage() {
     }
   };
 
-  const getStatusColor = (status: KeyStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case KeyStatus.ACTIVE:
+      case "Active":
         return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-      case KeyStatus.INACTIVE:
+      case "Inactive":
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400';
-      case KeyStatus.EXPIRED:
-      case KeyStatus.REVOKED:
+      case "Expired":
+      case "Revoked":
         return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -137,7 +137,7 @@ export default function SecurityDashboardPage() {
                       {key.rotation_due ? new Date(key.rotation_due).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {key.status === KeyStatus.INACTIVE && (
+                      {key.status === "Inactive" && (
                         <button
                           onClick={() => handleAction(key.id, 'activate')}
                           className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 mr-4"
@@ -145,7 +145,7 @@ export default function SecurityDashboardPage() {
                           Activate
                         </button>
                       )}
-                      {key.status === KeyStatus.ACTIVE && (
+                      {key.status === "Active" && (
                         <>
                           <button
                             onClick={() => handleAction(key.id, 'deactivate')}

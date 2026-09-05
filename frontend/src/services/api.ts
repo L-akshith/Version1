@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// Standardize base URL - proxy via Vite or direct to port 8000
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+const rawUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+const API_URL = rawUrl.endsWith("/api/v1") ? rawUrl : `${rawUrl.replace(/\/$/, "")}/api/v1`;
 
 const api = axios.create({
   baseURL: API_URL,

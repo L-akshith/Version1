@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import api from "../services/api";
-import { QuestionPaper, QuestionPaperStatistics, QuestionPaperVersion } from "../types";
+import type { QuestionPaper, QuestionPaperStatistics, QuestionPaperVersion } from "../types";
 import { 
   FileText, 
   Search, 
@@ -9,14 +9,11 @@ import {
   Filter, 
   CheckCircle2,
   Clock,
-  Archive,
   AlertCircle,
-  FileCheck,
-  XCircle,
   History,
-  Download,
   Trash2,
-  Edit
+  Edit,
+  Lock as LockIcon
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,7 +39,6 @@ export const QuestionPapersPage: React.FC = () => {
   const [subjects, setSubjects] = useState<{id: string, subject_name: string, subject_code: string}[]>([]);
   
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -103,7 +99,7 @@ export const QuestionPapersPage: React.FC = () => {
         setPapers(res.data.data);
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to load question papers");
+      console.error(err.response?.data?.detail || "Failed to load question papers");
     } finally {
       setLoading(false);
     }
@@ -197,6 +193,9 @@ export const QuestionPapersPage: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved": return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+      case "encrypted": return "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20";
+      case "scheduled": return "text-sky-400 bg-sky-500/10 border-sky-500/20";
+      case "released": return "text-violet-400 bg-violet-500/10 border-violet-500/20";
       case "draft": return "text-slate-400 bg-slate-500/10 border-slate-500/20";
       case "uploaded": return "text-blue-400 bg-blue-500/10 border-blue-500/20";
       case "under_review": return "text-amber-400 bg-amber-500/10 border-amber-500/20";
@@ -273,6 +272,9 @@ export const QuestionPapersPage: React.FC = () => {
                 <option value="uploaded">Uploaded</option>
                 <option value="under_review">Under Review</option>
                 <option value="approved">Approved</option>
+                <option value="encrypted">Encrypted</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="released">Released</option>
                 <option value="rejected">Rejected</option>
                 <option value="archived">Archived</option>
               </select>
@@ -330,7 +332,17 @@ export const QuestionPapersPage: React.FC = () => {
                         <span className="text-[10px] text-slate-500 font-bold tracking-wider mt-0.5">VERSION {p.version}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-slate-200">{p.title}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-200">{p.title}</span>
+                        {["encrypted", "scheduled", "released"].includes(p.status) && (
+                          <span title="Secured & Encrypted">
+                            <LockIcon className="w-3.5 h-3.5 text-fuchsia-400" />
+                          </span>
+
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
                         <span className="px-2 py-0.5 bg-white/5 rounded-md text-[10px] border border-white/5 truncate max-w-[150px]" title={p.exam_name || ""}>

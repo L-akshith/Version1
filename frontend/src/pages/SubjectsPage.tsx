@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import api from "../services/api";
-import { Subject, SubjectStatistics } from "../types";
+import type { Subject, SubjectStatistics } from "../types";
 import { 
   BookOpen, 
   Search, 
   Plus, 
   Filter, 
-  MoreVertical,
-  CheckCircle2,
   Clock,
+  CheckCircle2,
   Archive,
   AlertCircle
 } from "lucide-react";
@@ -34,7 +33,6 @@ export const SubjectsPage: React.FC = () => {
   const [stats, setStats] = useState<SubjectStatistics>({ total: 0, draft: 0, active: 0, archived: 0 });
   const [exams, setExams] = useState<{id: string, exam_name: string}[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -52,7 +50,7 @@ export const SubjectsPage: React.FC = () => {
   const canUpdate = user?.is_superuser || ["Admin", "Controller"].includes(user?.role_name || "");
   const canDelete = user?.is_superuser || ["Admin"].includes(user?.role_name || "");
 
-  const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm<SubjectFormData>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<SubjectFormData>({
     resolver: zodResolver(subjectSchema)
   });
 
@@ -82,7 +80,7 @@ export const SubjectsPage: React.FC = () => {
         setSubjects(res.data.data);
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to load subjects");
+      console.error(err.response?.data?.detail || "Failed to load subjects");
     } finally {
       setLoading(false);
     }

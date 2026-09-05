@@ -1,23 +1,29 @@
-export enum Algorithm {
-  AES256_GCM = 'AES256_GCM',
-  RSA4096 = 'RSA4096',
-  ECC_P256 = 'ECC_P256',
-  Ed25519 = 'Ed25519',
-}
+export const Algorithm = {
+  AES256_GCM: "AES256_GCM",
+  RSA4096: "RSA4096",
+  ECC_P256: "ECC_P256",
+  Ed25519: "Ed25519",
+} as const;
 
-export enum KeyPurpose {
-  ENCRYPTION = 'Encryption',
-  SIGNATURE = 'Signature',
-  VERIFICATION = 'Verification',
-  WRAPPING = 'Wrapping',
-}
+export type Algorithm = (typeof Algorithm)[keyof typeof Algorithm];
 
-export enum KeyStatus {
-  ACTIVE = 'Active',
-  INACTIVE = 'Inactive',
-  EXPIRED = 'Expired',
-  REVOKED = 'Revoked',
-}
+export const KeyPurpose = {
+  Encryption: "Encryption",
+  Signature: "Signature",
+  Verification: "Verification",
+  Wrapping: "Wrapping",
+} as const;
+
+export type KeyPurpose = (typeof KeyPurpose)[keyof typeof KeyPurpose];
+
+export const KeyStatus = {
+  Active: "Active",
+  Inactive: "Inactive",
+  Expired: "Expired",
+  Revoked: "Revoked",
+} as const;
+
+export type KeyStatus = (typeof KeyStatus)[keyof typeof KeyStatus];
 
 export interface KeyMetadata {
   id: string;

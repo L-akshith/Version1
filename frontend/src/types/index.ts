@@ -157,3 +157,24 @@ export interface QuestionPaperStatistics {
   rejected: number;
   archived: number;
 }
+
+export interface ApprovalWorkflowResponse {
+  id: string;
+  question_paper_id: string;
+  approval_level: string;
+  approver_id: string | null;
+  approver_name: string | null;
+  decision: string;
+  remarks: string | null;
+  approved_at: string | null;
+  created_at: string;
+}
+
+export interface ApprovalTimelineResponse {
+  paper: QuestionPaper;
+  current_stage: string | null;
+  history: ApprovalWorkflowResponse[];
+}
+
+export * from './release';
+export * from './security';

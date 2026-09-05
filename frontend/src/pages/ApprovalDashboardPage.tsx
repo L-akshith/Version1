@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../services/api';
-import { 
+import { useEffect, useState } from 'react';
+import api from '../services/api';
+import type { 
   ApprovalTimelineResponse, 
-  QuestionPaper, 
-  ApprovalWorkflowResponse 
+  QuestionPaper 
 } from '../types';
 
-export default function ApprovalDashboardPage() {
+export const ApprovalDashboardPage = () => {
   const [pendingPapers, setPendingPapers] = useState<QuestionPaper[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<ApprovalTimelineResponse | null>(null);
   const [remarks, setRemarks] = useState('');
@@ -69,35 +68,35 @@ export default function ApprovalDashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column: List of pending papers */}
-        <div className="md:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-          <div className="px-4 py-5 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
+        <div className="md:col-span-1 glass-panel rounded-2xl shadow-xl border border-white/5 flex flex-col h-[700px]">
+          <div className="px-4 py-5 border-b border-white/5 bg-slate-900/50">
+            <h3 className="text-lg font-bold text-white tracking-tight">
               Pending My Approval
             </h3>
           </div>
-          <div className="divide-y divide-gray-200 dark:divide-gray-700 h-[600px] overflow-y-auto">
+          <div className="divide-y divide-white/5 flex-1 overflow-y-auto">
             {loading ? (
-              <div className="p-4 text-center text-gray-500">Loading...</div>
+              <div className="p-8 text-center text-slate-500 text-sm">Syncing queue...</div>
             ) : pendingPapers.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">No papers pending your approval.</div>
+              <div className="p-8 text-center text-slate-500 text-sm">No papers pending your approval.</div>
             ) : (
               pendingPapers.map((paper) => (
                 <div 
                   key={paper.id} 
-                  className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${selectedPaper?.paper.id === paper.id ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}
+                  className={`p-4 cursor-pointer hover:bg-white/[0.02] transition-colors ${selectedPaper?.paper.id === paper.id ? 'bg-indigo-500/10 border-l-2 border-indigo-500' : 'border-l-2 border-transparent'}`}
                   onClick={() => fetchTimeline(paper.id)}
                 >
-                  <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 truncate">
-                    {paper.paper_code} - Version {paper.version}
+                  <p className="text-sm font-semibold text-indigo-400 truncate">
+                    {paper.paper_code} <span className="text-[10px] text-slate-500 uppercase tracking-wider ml-1">v{paper.version}</span>
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs font-medium text-slate-300 mt-1">
                     {paper.title}
                   </p>
-                  <div className="mt-2 flex items-center justify-between text-xs">
-                    <span className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 py-0.5 px-2 rounded-full font-medium">
+                  <div className="mt-3 flex items-center justify-between text-xs">
+                    <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 py-0.5 px-2 rounded font-bold tracking-wider uppercase text-[9px]">
                       {paper.status.replace('_', ' ')}
                     </span>
-                    <span className="text-gray-400">
+                    <span className="text-slate-500 font-mono text-[10px]">
                       {new Date(paper.upload_time).toLocaleDateString()}
                     </span>
                   </div>
@@ -110,13 +109,13 @@ export default function ApprovalDashboardPage() {
         {/* Right Column: Timeline & Actions */}
         <div className="md:col-span-2">
           {selectedPaper ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 h-full flex flex-col">
-              <div className="px-4 py-5 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
-                  {selectedPaper.paper.title} ({selectedPaper.paper.paper_code})
+            <div className="glass-panel rounded-2xl shadow-xl border border-white/5 h-[700px] flex flex-col">
+              <div className="px-6 py-5 border-b border-white/5 bg-slate-900/50">
+                <h3 className="text-lg font-bold text-white">
+                  {selectedPaper.paper.title} <span className="text-slate-500 text-base font-normal">({selectedPaper.paper.paper_code})</span>
                 </h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Version {selectedPaper.paper.version} • Uploaded by {selectedPaper.paper.uploaded_by}
+                <p className="mt-1 text-xs text-slate-400 font-medium tracking-wide uppercase">
+                  Version {selectedPaper.paper.version} • Uploaded by <span className="text-indigo-400">{selectedPaper.paper.uploaded_by}</span>
                 </p>
               </div>
               
@@ -129,7 +128,7 @@ export default function ApprovalDashboardPage() {
                       <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
                     </div>
                     <div className="relative flex justify-between">
-                      {STAGES.map((stageName, stageIdx) => {
+                      {STAGES.map((stageName) => {
                         const historyStage = selectedPaper.history.find(h => h.approval_level === stageName);
                         const isCurrent = selectedPaper.current_stage === stageName;
                         const isApproved = historyStage?.decision === 'approved';
@@ -210,36 +209,36 @@ export default function ApprovalDashboardPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-750 border-t border-gray-200 dark:border-gray-700">
+              <div className="p-6 border-t border-white/5 bg-slate-900/30">
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Remarks (Optional)</label>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Remarks (Optional)</label>
                   <textarea
                     rows={2}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white sm:text-sm"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 resize-none"
                     placeholder="Enter approval or rejection remarks..."
                     value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
                   />
                 </div>
-                <div className="flex justify-end space-x-3">
+                <div className="flex justify-end gap-3">
                   <button
                     onClick={() => handleDecision('return')}
                     disabled={decisionLoading}
-                    className="inline-flex items-center px-4 py-2 border border-yellow-300 shadow-sm text-sm font-medium rounded-md text-yellow-700 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                    className="px-4 py-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
                   >
                     Return for Revision
                   </button>
                   <button
                     onClick={() => handleDecision('reject')}
                     disabled={decisionLoading}
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    className="px-4 py-2 bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
                   >
                     Reject
                   </button>
                   <button
                     onClick={() => handleDecision('approve')}
                     disabled={decisionLoading}
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-lg"
                   >
                     {decisionLoading ? 'Processing...' : 'Approve Paper'}
                   </button>
@@ -247,7 +246,7 @@ export default function ApprovalDashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 h-[600px] flex items-center justify-center text-gray-500">
+            <div className="glass-panel rounded-2xl shadow-xl border border-white/5 h-[700px] flex items-center justify-center text-slate-500 text-sm">
               Select a paper to view its timeline and make a decision.
             </div>
           )}

@@ -18,7 +18,7 @@ from app.core.config import get_settings
 settings = get_settings()
 
 connect_args = {}
-if settings.ENVIRONMENT.lower() == "production" or "ssl=require" in settings.DATABASE_URL:
+if settings.is_ssl_required:
     connect_args["ssl"] = "require"
 
 engine = create_async_engine(

@@ -8,7 +8,7 @@ All environment variables are loaded and validated here.
 from functools import lru_cache
 from typing import List, Optional
 
-from pydantic import field_validator
+from pydantic import PrivateAttr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     DATABASE_MAX_OVERFLOW: int = 5
     DATABASE_POOL_TIMEOUT: int = 30
     DATABASE_POOL_RECYCLE: int = 1800
+    _ssl_required_by_url: bool = PrivateAttr(default=False)
 
     # ── JWT ──────────────────────────────────────────────────────
     JWT_SECRET_KEY: str = "CHANGE-THIS-TO-A-LONG-RANDOM-SECRET-KEY-IN-PRODUCTION"
@@ -107,11 +108,44 @@ class Settings(BaseSettings):
     def validate_database_url(cls, v: str) -> str:
         if not v:
             raise ValueError("DATABASE_URL must be set")
-        # Railway PostgreSQL provides "postgres://" or "postgresql://"
+
+        # Railway / Neon PostgreSQL scheme normalization
         if v.startswith("postgres://"):
             v = v.replace("postgres://", "postgresql+asyncpg://", 1)
         elif v.startswith("postgresql://") and not v.startswith("postgresql+asyncpg://"):
             v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+        # Strip libpq-specific 'sslmode' query parameter for asyncpg compatibility
+        if "sslmode" in v or "ssl=" in v:
+            from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+
+            parsed = urlparse(v)
+            query_params = parse_qs(parsed.query, keep_blank_values=True)
+            sslmode_vals = query_params.pop("sslmode", [])
+            query_params.pop("channel_binding", None)
+
+            is_ssl = any(
+                val.lower() in ("require", "prefer", "verify-ca", "verify-full")
+                for val in sslmode_vals
+            ) or any(
+                val.lower() in ("require", "true", "1")
+                for val in query_params.get("ssl", [])
+            )
+
+            cls._last_ssl_required = is_ssl
+
+            new_query = urlencode(query_params, doseq=True)
+            v = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path,
+                parsed.params,
+                new_query,
+                parsed.fragment,
+            ))
+        else:
+            cls._last_ssl_required = False
+
         return v
 
     @field_validator("JWT_SECRET_KEY", mode="before")
@@ -130,6 +164,9 @@ class Settings(BaseSettings):
 
     def model_post_init(self, __context) -> None:
         """Validate production configuration to fail fast if insecure."""
+        if getattr(self, "_last_ssl_required", False):
+            self._ssl_required_by_url = True
+
         if self.DB_POOL_SIZE is not None:
             self.DATABASE_POOL_SIZE = self.DB_POOL_SIZE
         if self.DB_MAX_OVERFLOW is not None:
@@ -147,6 +184,19 @@ class Settings(BaseSettings):
             if self.STORAGE_PROVIDER == "s3" and not self.S3_BUCKET:
                 raise ValueError("S3 storage provider requires S3_BUCKET to be set in production")
 
+    @property
+    def is_ssl_required(self) -> bool:
+        """Check whether SSL/TLS is required for the database connection."""
+        raw_url = str(self.DATABASE_URL).lower()
+        if raw_url.startswith("sqlite"):
+            return False
+        return (
+            self.ENVIRONMENT.lower() == "production"
+            or getattr(self, "_ssl_required_by_url", False)
+            or "ssl=require" in raw_url
+            or "ssl=true" in raw_url
+            or "ssl=1" in raw_url
+        )
 
     @property
     def sync_database_url(self) -> str:
@@ -155,6 +205,8 @@ class Settings(BaseSettings):
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
         return url
+
+
 
 
 

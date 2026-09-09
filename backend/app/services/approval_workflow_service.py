@@ -239,13 +239,14 @@ class ApprovalWorkflowService:
                     )
 
                 # Final approval always transitions status to ENCRYPTED
-                await self._paper_repo.update(
-                    paper_id,
-                    {
-                        "status": QuestionPaperStatus.ENCRYPTED,
-                        "approved_by": user_id,
-                    }
-                )
+                update_fields = {
+                    "status": QuestionPaperStatus.ENCRYPTED,
+                    "approved_by": user_id,
+                }
+                if metadata and metadata.encrypted_storage_path:
+                    update_fields["storage_path"] = metadata.encrypted_storage_path
+
+                await self._paper_repo.update(paper_id, update_fields)
             else:
                 # Move to next stage
                 next_level = ApprovalLevel.ORDER[current_idx + 1]

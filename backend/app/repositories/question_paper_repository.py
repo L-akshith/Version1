@@ -56,6 +56,34 @@ class QuestionPaperRepository(BaseRepository[QuestionPaper]):
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_for_update_with_relations(
+        self,
+        paper_id: uuid.UUID,
+    ) -> Optional[QuestionPaper]:
+        """
+        Retrieve a question paper with row locking (with_for_update) and relationships eagerly loaded.
+
+        Args:
+            paper_id: The UUID of the paper.
+
+        Returns:
+            The QuestionPaper with relationships loaded, or None.
+        """
+        stmt = (
+            select(QuestionPaper)
+            .options(
+                selectinload(QuestionPaper.subject).selectinload(Subject.exam),
+                selectinload(QuestionPaper.uploader),
+                selectinload(QuestionPaper.approver),
+                selectinload(QuestionPaper.encrypted_metadata),
+            )
+            .where(QuestionPaper.id == paper_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def list_papers(
         self,
         skip: int = 0,

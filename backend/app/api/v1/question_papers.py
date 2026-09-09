@@ -176,6 +176,32 @@ async def update_question_paper(
     return APIResponse.ok(data=paper, message="Question paper updated successfully")
 
 
+@router.post(
+    "/question-papers/{paper_id}/repair-encryption-status",
+    response_model=APIResponse[QuestionPaperResponse],
+    summary="Repair paper encryption status",
+    description="Safely transition an APPROVED paper with existing valid encryption metadata "
+    "to ENCRYPTED status. Requires 'questionpapers:update' permission.",
+    dependencies=[Depends(require_permissions(["questionpapers:update"]))],
+)
+async def repair_paper_encryption_status(
+    paper_id: uuid.UUID,
+    request: Request,
+    current_user: CurrentUser,
+    service: Annotated[QuestionPaperService, Depends(get_question_paper_service)],
+) -> APIResponse[QuestionPaperResponse]:
+    """Repair an APPROVED paper with valid encryption metadata to ENCRYPTED status."""
+    paper = await service.repair_approved_paper_to_encrypted(
+        paper_id=paper_id,
+        user_id=current_user.id,
+        ip_address=request.client.host if request.client else None,
+    )
+    return APIResponse.ok(
+        data=paper,
+        message="Question paper encryption status repaired successfully",
+    )
+
+
 @router.delete(
     "/question-papers/{paper_id}",
     response_model=APIResponse[None],

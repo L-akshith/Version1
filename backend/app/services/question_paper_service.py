@@ -365,6 +365,23 @@ class QuestionPaperService:
                 message=f"Cannot update a paper in '{paper.status}' status. It is locked."
             )
 
+        # If paper is APPROVED and has complete encryption metadata, auto-transition to ENCRYPTED
+        if (
+            paper.status == QuestionPaperStatus.APPROVED
+            and paper.encrypted_metadata
+            and paper.encrypted_metadata.encrypted_storage_path
+        ):
+            return await self.repair_approved_paper_to_encrypted(
+                paper_id=paper_id,
+                user_id=user_id,
+                ip_address=ip_address,
+            )
+
+        if paper.status == QuestionPaperStatus.APPROVED:
+            raise BadRequestException(
+                message=f"Cannot update a paper in '{paper.status}' status. It is locked."
+            )
+
         data: Dict[str, Any] = update_data.model_dump(exclude_unset=True)
 
         if "status" in data:
@@ -406,6 +423,116 @@ class QuestionPaperService:
                 "version": paper.version,
             },
             ip_address=ip_address,
+        )
+
+        return self._to_response(updated_paper)
+
+    async def repair_approved_paper_to_encrypted(
+        self,
+        paper_id: uuid.UUID,
+        user_id: uuid.UUID,
+        ip_address: Optional[str] = None,
+    ) -> QuestionPaperResponse:
+        """
+        Safely repair an APPROVED question paper that already has an encrypted artifact
+        and valid EncryptedPaperMetadata by transitioning its status to ENCRYPTED.
+
+        Invariants enforced:
+            - Locks the question paper row (with_for_update).
+            - Verifies current status is APPROVED.
+            - Verifies EncryptedPaperMetadata exists.
+            - Verifies encryption metadata completeness.
+            - Verifies storage paths are present.
+            - Validates state transition (APPROVED -> ENCRYPTED).
+            - Aligns paper storage_path to encrypted_storage_path.
+            - Creates an audit log entry (NEVER exposing secrets/keys).
+            - Executes transactionally.
+        """
+        # 1. Lock row with relations
+        paper = await self._paper_repo.get_for_update_with_relations(paper_id)
+        if paper is None:
+            raise NotFoundException(
+                message=f"Question Paper with ID '{paper_id}' not found"
+            )
+
+        # 2. Verify current status is APPROVED
+        if paper.status != QuestionPaperStatus.APPROVED:
+            raise BadRequestException(
+                message=(
+                    f"Paper status must be '{QuestionPaperStatus.APPROVED}' to perform "
+                    f"encryption status repair. Current status: '{paper.status}'"
+                )
+            )
+
+        # 3. Verify EncryptedPaperMetadata exists
+        metadata = paper.encrypted_metadata
+        if metadata is None:
+            raise BadRequestException(
+                message="Cannot repair paper: Encrypted paper metadata is missing."
+            )
+
+        # 4. Verify completeness of metadata
+        if not (
+            metadata.key_identifier
+            and metadata.encryption_algorithm
+            and metadata.nonce
+            and metadata.wrapped_key
+            and metadata.encrypted_storage_path
+            and metadata.encryption_version
+        ):
+            raise BadRequestException(
+                message="Cannot repair paper: Encryption metadata is incomplete."
+            )
+
+        # 5. Verify storage path is present
+        if not metadata.encrypted_storage_path:
+            raise BadRequestException(
+                message="Cannot repair paper: Encrypted storage path is missing."
+            )
+
+        # 6. Validate status transition (APPROVED -> ENCRYPTED)
+        if not QuestionPaperStatus.is_valid_transition(
+            paper.status, QuestionPaperStatus.ENCRYPTED
+        ):
+            raise BadRequestException(
+                message=(
+                    f"Invalid status transition from '{paper.status}' "
+                    f"to '{QuestionPaperStatus.ENCRYPTED}'"
+                )
+            )
+
+        # 7. Update status to ENCRYPTED and align storage_path
+        update_fields = {
+            "status": QuestionPaperStatus.ENCRYPTED,
+            "storage_path": metadata.encrypted_storage_path,
+        }
+        await self._paper_repo.update(paper_id, update_fields)
+        await self._session.flush()
+
+        updated_paper = await self._paper_repo.get_with_relations(paper_id)
+
+        # 8. Create audit log entry without secrets
+        await self._create_audit_entry(
+            user_id=user_id,
+            action="paper_encryption_status_repaired",
+            resource_id=str(paper_id),
+            details={
+                "paper_code": paper.paper_code,
+                "version": paper.version,
+                "previous_status": QuestionPaperStatus.APPROVED,
+                "new_status": QuestionPaperStatus.ENCRYPTED,
+                "key_identifier": metadata.key_identifier,
+                "encryption_algorithm": metadata.encryption_algorithm,
+                "encryption_version": metadata.encryption_version,
+            },
+            ip_address=ip_address,
+        )
+
+        logger.info(
+            "Paper %s (%s v%s) status successfully repaired from APPROVED to ENCRYPTED.",
+            paper_id,
+            paper.paper_code,
+            paper.version,
         )
 
         return self._to_response(updated_paper)

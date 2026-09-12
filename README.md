@@ -146,6 +146,77 @@ docker compose up --build
 
 ---
 
+## Railway & Netlify Staging Deployment Guide
+
+### Deployment Architecture
+- **Frontend**: Netlify (React 18 + Vite SPA)
+- **Backend API**: Railway (`examshield-api` FastAPI Service)
+- **Release Worker**: Railway (`examshield-worker` Dedicated Daemon Service)
+- **Database**: Railway PostgreSQL
+
+---
+
+### Step-by-Step Deployment Instructions
+
+#### STEP 1: Repository Push
+Push the ExamShield codebase to your GitHub repository.
+
+#### STEP 2: Create Railway Project & PostgreSQL Database
+1. Log into [Railway.app](https://railway.app) and create a new project.
+2. Add a **PostgreSQL** database service.
+3. Note the provided `DATABASE_URL` connection string.
+
+#### STEP 3: Deploy Backend API Service (`examshield-api`)
+1. Add a new service connected to your GitHub repository targeting the `backend/` path.
+2. Configure Environment Variables in Railway:
+   - `DATABASE_URL`: Your Railway PostgreSQL connection URL
+   - `JWT_SECRET_KEY`: High-entropy 256-bit secret string
+   - `ENVIRONMENT`: `staging`
+   - `CRYPTO_PROVIDER`: `local` (or `kms` if using AWS KMS)
+   - `STORAGE_PROVIDER`: `local` (or `s3` if using S3)
+   - `LOCAL_KEYS_DIR`: `/app/data/.local_keys` (Subdirectory on persistent volume)
+   - `UPLOAD_DIR`: `/app/data/uploads` (Subdirectory on persistent volume)
+   - `CORS_ORIGINS`: `["https://your-app.netlify.app"]`
+3. Persistent Volume Mounting (Cryptographic & File Storage Safety):
+   - In Railway UI, add a **Persistent Volume** to the backend service mounted at `/app/data`.
+   - Configure `LOCAL_KEYS_DIR=/app/data/.local_keys` and `UPLOAD_DIR=/app/data/uploads`.
+   - This ensures generated RSA wrapping keys (`.pem` files) and encrypted paper artifacts survive backend process restarts and redeployments without obscuring application files at `/app`.
+4. Start Command:
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port $PORT
+   ```
+
+#### STEP 4: Execute Alembic Database Migrations
+Run Alembic migrations via Railway CLI or one-off container command:
+```bash
+alembic upgrade head
+python -m app.database.seed
+```
+
+#### STEP 5: Deploy Release Worker Service (`examshield-worker`)
+1. Create a second Railway service in the same project connected to the same repository.
+2. Link the same `DATABASE_URL` and environment variables.
+3. Start Command:
+   ```bash
+   python -m app.worker.release_worker
+   ```
+
+#### STEP 6: Deploy React Frontend to Netlify
+1. Log into [Netlify.com](https://netlify.com) and create a new site from your GitHub repository.
+2. Build Settings:
+   - **Base directory**: `frontend`
+   - **Build command**: `npm run build`
+   - **Publish directory**: `frontend/dist`
+3. Environment Variables:
+   - `VITE_API_URL`: `https://<your-railway-api-domain>.up.railway.app`
+4. Deploy the site.
+
+#### STEP 7: Verification
+1. Access `https://<your-railway-api-domain>.up.railway.app/api/v1/health` to confirm API health.
+2. Access `https://<your-netlify-app>.netlify.app` to log in, upload, approve, encrypt, and schedule question paper releases.
+
+---
+
 ## Verification & Testing
 
 ### Running Backend Tests

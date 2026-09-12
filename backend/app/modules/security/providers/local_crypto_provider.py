@@ -10,6 +10,7 @@ MUST NOT be used in production — use a real KMS instead.
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Dict
 
@@ -32,8 +33,23 @@ class LocalCryptoKeyProvider(CryptoKeyProvider):
     PEM files on disk so they survive process restarts.
     """
 
-    def __init__(self, key_dir: Path | None = None) -> None:
-        self._key_dir = key_dir or _DEFAULT_KEY_DIR
+    def __init__(self, key_dir: Path | str | None = None) -> None:
+        if key_dir is not None:
+            target = Path(key_dir)
+        elif os.getenv("LOCAL_KEYS_DIR"):
+            target = Path(os.environ["LOCAL_KEYS_DIR"])
+        else:
+            target = _DEFAULT_KEY_DIR
+
+        if not target.is_absolute():
+            # If target is relative and not equal to _DEFAULT_KEY_DIR, resolve relative to root
+            if target == _DEFAULT_KEY_DIR:
+                self._key_dir = target.resolve()
+            else:
+                self._key_dir = (Path(__file__).resolve().parents[4] / target).resolve()
+        else:
+            self._key_dir = target.resolve()
+
         self._key_dir.mkdir(parents=True, exist_ok=True)
         self._private_keys: Dict[str, rsa.RSAPrivateKey] = {}
         self._load_existing_keys()

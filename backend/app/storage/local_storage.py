@@ -24,10 +24,21 @@ class LocalStorageProvider(StorageInterface):
     creates parent directories as needed.
     """
 
-    def __init__(self, base_dir: str) -> None:
-        self._base_dir = Path(base_dir)
+    def __init__(self, base_dir: str | Path | None = None) -> None:
+        if base_dir is not None:
+            target = Path(base_dir)
+        elif os.getenv("UPLOAD_DIR"):
+            target = Path(os.environ["UPLOAD_DIR"])
+        else:
+            target = Path("uploads/question_papers")
+
+        if not target.is_absolute():
+            self._base_dir = target.resolve()
+        else:
+            self._base_dir = target.resolve()
+
         self._base_dir.mkdir(parents=True, exist_ok=True)
-        logger.info("LocalStorageProvider initialized at: %s", self._base_dir.resolve())
+        logger.info("LocalStorageProvider initialized at: %s", self._base_dir)
 
     def _resolve_path(self, relative_path: str) -> Path:
         """Resolve a relative path against the storage base directory."""

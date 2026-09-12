@@ -79,8 +79,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 
-    # ── File Storage ─────────────────────────────────────────────
+    # ── File Storage & Local Cryptographic Key Storage ───────────
     UPLOAD_DIR: str = "uploads/question_papers"
+    LOCAL_KEYS_DIR: str = ".local_keys"
     MAX_UPLOAD_SIZE_MB: int = 50
 
     # ── AWS & Production Cloud Infrastructure ─────────────────────

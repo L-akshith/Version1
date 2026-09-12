@@ -55,7 +55,9 @@ def get_crypto_key_provider() -> CryptoKeyProvider:
                 LocalCryptoKeyProvider,
             )
 
-            _crypto_provider_instance = LocalCryptoKeyProvider()
+            _crypto_provider_instance = LocalCryptoKeyProvider(
+                key_dir=settings.LOCAL_KEYS_DIR
+            )
     return _crypto_provider_instance
 
 
